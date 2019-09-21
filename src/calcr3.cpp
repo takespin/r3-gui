@@ -30,7 +30,7 @@ bool calcr3Thread::prepareCalc()
     ax = spin_sys(nspins);
 
     ax.isotope(0,"13C");
-    ax.isotope(1,"13C");
+    ax.isotope(1,"15N");
 
     // dipolar coupling constant in Hz
     double dis;
