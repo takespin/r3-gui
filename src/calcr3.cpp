@@ -42,7 +42,7 @@ bool calcr3Thread::prepareCalc()
 
     iso_CSA[0]=0.0; delta_CSA[0]=0.0e3; eta_CSA[0]=0.0;
     alpha_CSA[0]=0.0; beta_CSA[0]=0.0; gamma_CSA[0]=0.0;
-    iso_CSA[1]=5.0e3; delta_CSA[1]=0.0; eta_CSA[1]=0.0;
+    iso_CSA[1]=0.0; delta_CSA[1]=0.0; eta_CSA[1]=0.0;
     alpha_CSA[1]=0.0; beta_CSA[1]=0.0; gamma_CSA[1]=0.0;
 
     //----- setup for the hamiltonian -----
@@ -175,7 +175,7 @@ void calcr3Thread::run()
             {
               Hamiltonian += exp(complex(0,i*2.0*PI*t*1000*spinningSpeed())) * H[i+2];
             }
-         //   Hamiltonian += 1000*nutationSpeed() * Ix(ax,1); // cw irradiation at spin I
+            Hamiltonian += 1000*nutationSpeed() * Ix(ax,1); // cw irradiation at spin I
 
             // time evolution operator
             U[cevolve]=prop(Hamiltonian,dt);
