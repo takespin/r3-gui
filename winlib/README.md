@@ -1,0 +1,1 @@
+- This folder contains the gamma library compiled using cygwin.
