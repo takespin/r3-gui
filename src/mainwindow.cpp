@@ -12,7 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     calcInProgress=false;
 
-    resize(QSize(400,600));
+    resize(QSize(400,500));
     createWidgets();
     createPanel();
 
@@ -262,10 +262,10 @@ bool MainWindow::setupParams()
     if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
     else {calcThread->setSpinningSpeed(d);}
 
-    qs=nutationSpeedLineEdit->text();
-    d=qs.toDouble(&ok);
-    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
-    else {calcThread->setNutationSpeed(d);}
+    //qs=nutationSpeedLineEdit->text();
+    //d=qs.toDouble(&ok);
+    //if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
+    //else {calcThread->setNutationSpeed(d);}
 
     qs=angleIncrementLineEdit->text();
     d=qs.toDouble(&ok);

@@ -224,9 +224,9 @@ void calcr3Thread::run()
 
 
 
-    QString mes= "a:"+QString::number(alpha)
-               +",b:"+QString::number(beta)
-               +",g:"+QString::number(gamma);
+    QString mes= "alpha: "+QString::number(alpha)
+               +", beta: "+QString::number(beta)
+               +", gamma: "+QString::number(gamma);
     emit sendMessage(mes);
 
     mutex.lock();
