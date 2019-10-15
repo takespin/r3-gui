@@ -41,6 +41,8 @@ public:
     void setMagneticField(double d) {FMagneticField=d;}
     void setGammaI(double d) {FGammaI=d;}
     void setGammaS(double d) {FGammaS=d;}
+    void setIsoS(double d) {FIsoS=d;}
+    void setIsoI(double d) {FIsoI=d;}
     void setDistance(double d) {FDistance=d;}
     void setSpinningSpeed(double d) {FSpinningSpeed=d;}
     void setNutationSpeed(double d) {FNutationSpeed=d;}
@@ -49,15 +51,11 @@ public:
     void setNSteps(int k) {FNSteps=k;}
     void setAl(int k) {FAl=k;}
     void setNObs(int k) {FNObs=k;}
-
-signals:
-    void sendMessage(QString qs);
-    void calcComplete();
-
-public slots:
     double magneticField() {return FMagneticField;}
     double gammaI() {return FGammaI;}
     double gammaS() {return FGammaS;}
+    double isoS() {return FIsoS;}
+    double isoI() {return FIsoI;}
     double distance() {return FDistance;}
     double spinningSpeed() {return FSpinningSpeed;}
     double nutationSpeed() {return FNutationSpeed;}
@@ -66,6 +64,12 @@ public slots:
     int nSteps() {return FNSteps;}
     int al() {return FAl;}
     int nObs() {return FNObs;}
+signals:
+    void sendMessage(QString qs);
+    void calcComplete();
+
+public slots:
+
 
 protected:
     void run();
@@ -78,6 +82,8 @@ private:
     double FMagneticField;
     double FGammaI;
     double FGammaS;
+    double FIsoS;
+    double FIsoI;
     double FDistance;
     double FSpinningSpeed;
     double FNutationSpeed;
