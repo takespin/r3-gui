@@ -35,7 +35,8 @@ private:
     QPushButton *loadParametersPushButton;
     QPushButton *saveParametersPushButton;
 
-
+    QLineEdit *isoILineEdit;
+    QLineEdit *isoSLineEdit;
     QLineEdit *spinningSpeedLineEdit;
     QLineEdit *nutationSpeedLineEdit;
     QLineEdit *distanceLineEdit;

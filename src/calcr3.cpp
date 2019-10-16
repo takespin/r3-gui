@@ -1,5 +1,6 @@
 #include "calcr3.h"
 #include "math.h"
+#include <QDebug>
 
 
 calcr3Thread::calcr3Thread()
@@ -29,17 +30,22 @@ bool calcr3Thread::prepareCalc()
     ax = spin_sys(nspins);
 
     ax.isotope(0,"13C");
-    ax.isotope(1,"15N");
+    ax.isotope(1,"13C");
 
     // dipolar coupling constant in Hz
-    double dis=10*(1/2*3.141592)*6.626*gammaI()*gammaS()*(1/distance()*distance()*distance());
+    double dis;
+    dis=10*6.626*gammaI()*gammaS()/(distance()*distance()*distance());
     // 10 comes from 1E-7.1E-34.1E6.1E6.1E30 = 1E1
+
     D[0][1]=dis;
     alpha_D[0][1]=0; beta_D[0][1]=0; gamma_D[0][1]=0;
 
-    iso_CSA[0]=0.0; delta_CSA[0]=0.0e3; eta_CSA[0]=0.0;
+    iso_CSA[0]=isoS();
+    delta_CSA[0]=0.0e3; eta_CSA[0]=0.0;
     alpha_CSA[0]=0.0; beta_CSA[0]=0.0; gamma_CSA[0]=0.0;
-    iso_CSA[1]=5.0e3; delta_CSA[1]=0.0; eta_CSA[1]=0.0;
+
+    iso_CSA[1]=isoI();
+    delta_CSA[1]=0.0; eta_CSA[1]=0.0;
     alpha_CSA[1]=0.0; beta_CSA[1]=0.0; gamma_CSA[1]=0.0;
 
     //----- setup for the hamiltonian -----
@@ -172,7 +178,7 @@ void calcr3Thread::run()
             {
               Hamiltonian += exp(complex(0,i*2.0*PI*t*1000*spinningSpeed())) * H[i+2];
             }
-         //   Hamiltonian += 1000*nutationSpeed() * Ix(ax,1); // cw irradiation at spin I
+            Hamiltonian += 1000*nutationSpeed() * Ix(ax,1); // cw irradiation at spin I
 
             // time evolution operator
             U[cevolve]=prop(Hamiltonian,dt);
@@ -186,7 +192,7 @@ void calcr3Thread::run()
               cevolve = 0;
               cobs = 0;
               cal = 0;
-              currentState = L2;
+              currentState = B1;
             }
             else
             {

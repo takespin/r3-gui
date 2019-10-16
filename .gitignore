@@ -43,3 +43,5 @@ target_wrapper.*
 CMakeLists.txt.user*
 
 build/
+
+.DS_Store

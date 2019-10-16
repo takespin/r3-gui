@@ -40,6 +40,9 @@ HEADERS += \
 mac:INCLUDEPATH += /usr/local/include/gamma-4.3.3/
 mac:LIBS += -L/usr/local/lib/gamma-4.3.3/ -lgamma -lm
 
+win32:INCLUDEPATH += C:/temp/gamma/src
+win32:LIBS += -L"C:\temp\gamma\i686-pc-cygwin" -llibgamma.dll -lm
+
 QMAKE_CXXFLAGS += -O3
 
 # Default rules for deployment.

@@ -40,6 +40,11 @@ void MainWindow::createWidgets()
     connect(saveParametersPushButton,SIGNAL(clicked()),this,SLOT(onSaveParamatersPushButtonClicked()));
 
 
+    isoILineEdit = new QLineEdit();
+    isoILineEdit->setAlignment(Qt::AlignRight);
+
+    isoSLineEdit = new QLineEdit();
+    isoSLineEdit->setAlignment(Qt::AlignRight);
 
     spinningSpeedLineEdit = new QLineEdit();
     spinningSpeedLineEdit->setAlignment(Qt::AlignRight);
@@ -100,25 +105,33 @@ void MainWindow::createPanel()
 
     QGridLayout *gLayout1 = new QGridLayout;
 
-    gLayout1->addWidget(new QLabel(tr("Magnetic field")),   0,0,1,1);
-    gLayout1->addWidget(magneticFieldLineEdit,              0,1,1,1);
-    gLayout1->addWidget(new QLabel(tr("T")),                0,2,1,1);
+//    gLayout1->addWidget(new QLabel(tr("Magnetic field")),   0,0,1,1);
+//    gLayout1->addWidget(magneticFieldLineEdit,              0,1,1,1);
+//    gLayout1->addWidget(new QLabel(tr("T")),                0,2,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Gyromagnetic ratio (S) ")), 1,0,1,1);
-    gLayout1->addWidget(gammaSLineEdit,                            1,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("Gyromagnetic ratio (S) ")), 0,0,1,1);
+    gLayout1->addWidget(gammaSLineEdit,                            0,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("MHz/T")),                   0,2,1,1);
+
+    gLayout1->addWidget(new QLabel(tr("Gyromagnetic ratio (I) ")), 1,0,1,1);
+    gLayout1->addWidget(gammaILineEdit,                            1,1,1,1);
     gLayout1->addWidget(new QLabel(tr("MHz/T")),                   1,2,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Gyromagnetic ratio (I) ")), 2,0,1,1);
-    gLayout1->addWidget(gammaILineEdit,                            2,1,1,1);
-    gLayout1->addWidget(new QLabel(tr("MHz/T")),                   2,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Isotropic Shift (S) ")), 2,0,1,1);
+    gLayout1->addWidget(isoSLineEdit,                            2,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("Hz")),                   2,2,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Distance between I and S")), 3,0,1,1);
-    gLayout1->addWidget(distanceLineEdit,                           3,1,1,1);
-    gLayout1->addWidget(new QLabel(tr("angstrom")),                 3,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Isotropic Shift (I) ")), 3,0,1,1);
+    gLayout1->addWidget(isoILineEdit,                            3,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("Hz")),                   3,2,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Nutation speed")), 4,0,1,1);
-    gLayout1->addWidget(nutationSpeedLineEdit,            4,1,1,1);
-    gLayout1->addWidget(new QLabel(tr("kHz")),            4,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Distance between I and S")), 4,0,1,1);
+    gLayout1->addWidget(distanceLineEdit,                           4,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("angstrom")),                 4,2,1,1);
+
+//    gLayout1->addWidget(new QLabel(tr("Nutation speed")), 4,0,1,1);
+//    gLayout1->addWidget(nutationSpeedLineEdit,            4,1,1,1);
+//    gLayout1->addWidget(new QLabel(tr("kHz")),            4,2,1,1);
 
     gLayout1->addWidget(new QLabel(tr("Spinning speed")), 5,0,1,1);
     gLayout1->addWidget(spinningSpeedLineEdit,            5,1,1,1);
@@ -141,6 +154,7 @@ void MainWindow::createPanel()
     gLayout1->addWidget(outputFileNameLineEdit,           10,1,1,1);
     gLayout1->addWidget(outputFileNamePushButton,         10,2,1,1);
 
+    vLayout1->addWidget(new QLabel(tr("R2 Simulation")));
     vLayout1->addLayout(hLayout0);
     vLayout1->addLayout(gLayout1);
 
@@ -161,10 +175,12 @@ void MainWindow::onLoadParametersPushButtonClicked()
   if (fileName.isNull()) return;
 
   QSettings settings(fileName, QSettings::IniFormat);
-  settings.beginGroup("r3");
-    magneticFieldLineEdit->setText(settings.value("Magnetic field","").toString());
+  settings.beginGroup("r2");
+//    magneticFieldLineEdit->setText(settings.value("Magnetic field","").toString());
     gammaSLineEdit->setText(settings.value("Gyromagnetic ratio (S)","").toString());
     gammaILineEdit->setText(settings.value("Gyromagnetic ratio (I)","").toString());
+    isoSLineEdit->setText(settings.value("Isotropic shift (S)","").toString());
+    isoILineEdit->setText(settings.value("Isotropic shift (I)","").toString());
     distanceLineEdit->setText(settings.value("Distance","").toString());
     spinningSpeedLineEdit->setText(settings.value("Spinning speed","").toString());
     nutationSpeedLineEdit->setText(settings.value("Nutation speed","").toString());
@@ -184,10 +200,12 @@ void MainWindow::onSaveParamatersPushButtonClicked()
     if (fileName.isNull()) return;
 
     QSettings settings(fileName, QSettings::IniFormat);
-    settings.beginGroup("r3");
-      settings.setValue("Magnetic field", magneticFieldLineEdit->text());
+    settings.beginGroup("r2");
+//      settings.setValue("Magnetic field", magneticFieldLineEdit->text());
       settings.setValue("Gyromagnetic ratio (S)", gammaSLineEdit->text());
       settings.setValue("Gyromagnetic ratio (I)", gammaILineEdit->text());
+      settings.setValue("Isotropic shift (S)", isoSLineEdit->text());
+      settings.setValue("Isotropic shift (I)", isoILineEdit->text());
       settings.setValue("Distance", distanceLineEdit->text());
       settings.setValue("Spinning speed", spinningSpeedLineEdit->text());
       settings.setValue("Nutation speed", nutationSpeedLineEdit->text());
@@ -208,12 +226,11 @@ bool MainWindow::setupParams()
     double d;
     int k;
     bool ok;
-//    const double twoPI=2.0*3.1415926535;
 
-    qs=magneticFieldLineEdit->text();
-    d=qs.toDouble(&ok);
-    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
-    else {calcThread->setMagneticField(d);}
+//    qs=magneticFieldLineEdit->text();
+//    d=qs.toDouble(&ok);
+//    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
+//    else {calcThread->setMagneticField(d);}
 
     qs=gammaSLineEdit->text();
     d=qs.toDouble(&ok);
@@ -225,6 +242,16 @@ bool MainWindow::setupParams()
     if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
     else {calcThread->setGammaI(d);}
 
+    qs=isoSLineEdit->text();
+    d=qs.toDouble(&ok);
+    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
+    else {calcThread->setIsoS(d);}
+
+    qs=isoILineEdit->text();
+    d=qs.toDouble(&ok);
+    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
+    else {calcThread->setIsoI(d);}
+
     qs=distanceLineEdit->text();
     d=qs.toDouble(&ok);
     if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
@@ -235,10 +262,10 @@ bool MainWindow::setupParams()
     if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
     else {calcThread->setSpinningSpeed(d);}
 
-    qs=nutationSpeedLineEdit->text();
-    d=qs.toDouble(&ok);
-    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
-    else {calcThread->setNutationSpeed(d);}
+    //qs=nutationSpeedLineEdit->text();
+    //d=qs.toDouble(&ok);
+    //if(!ok) {currentStatusLabel->setText("Invalid expression: 7" + qs); return false;}
+    //else {calcThread->setNutationSpeed(d);}
 
     qs=angleIncrementLineEdit->text();
     d=qs.toDouble(&ok);
