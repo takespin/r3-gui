@@ -16,7 +16,7 @@ void calcr3Thread::doCalc()
   stopped=false;
   if(!isRunning())
   {
-    start(HighPriority);
+    start(NormalPriority);
   }
   else
   {
@@ -160,6 +160,8 @@ void calcr3Thread::run()
         q=0;
         complex cdat;
 
+        double w;
+
         rho  = Fx(ax,"13C");
         detect = Fm(ax,"13C");
 
@@ -213,9 +215,16 @@ void calcr3Thread::run()
             break;
 
           case B1:
-            cdat = proj(rho,detect)*scale;
-            fid_2d->FID[0]->real->sig[cal] += cdat.real();
-            fid_2d->FID[0]->imag->sig[cal] += cdat.imag();
+//            cdat = proj(rho,detect)*scale;
+            cdat = proj(rho,detect);
+
+            // Gaussian apodization
+            w=exp(-cal*cal*(fid_2d->dw()/1000000.0)*(fid_2d->dw()/1000000.0)*apodizationWidth()*apodizationWidth()*3.55971);
+                                     // (2pi) ^2/(16 ln2) = 3.55971
+
+
+            fid_2d->FID[0]->real->sig[cal] += w * cdat.real();
+            fid_2d->FID[0]->imag->sig[cal] += w * cdat.imag();
             cal++;
             if (cal==al()) {cal=0; currentState=E;} else {currentState=L2;}
             break;

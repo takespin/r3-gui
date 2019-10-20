@@ -89,6 +89,8 @@ void MainWindow::createWidgets()
     alLineEdit = new QLineEdit();
     alLineEdit->setAlignment(Qt::AlignRight);
 
+    apodizationWidthLineEdit = new QLineEdit();
+    apodizationWidthLineEdit->setAlignment(Qt::AlignRight);
 
     outputFileNameLineEdit = new QLineEdit();
     outputFileNameLineEdit->setAlignment(Qt::AlignRight);
@@ -169,13 +171,17 @@ void MainWindow::createPanel()
     gLayout1->addWidget(new QLabel(tr("Number of data points")), 8,0,1,1);
     gLayout1->addWidget(alLineEdit,                              8,1,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Angle increment")), 9,0,1,1);
-    gLayout1->addWidget(angleIncrementLineEdit,            9,1,1,1);
-    gLayout1->addWidget(new QLabel(tr("deg")),             9,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Apodization width")), 9,0,1,1);
+    gLayout1->addWidget(apodizationWidthLineEdit,            9,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("Hz")),                9,2,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Output file")),    10,0,1,1);
-    gLayout1->addWidget(outputFileNameLineEdit,           10,1,1,1);
-    gLayout1->addWidget(outputFileNamePushButton,         10,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Angle increment")), 10,0,1,1);
+    gLayout1->addWidget(angleIncrementLineEdit,            10,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("deg")),             10,2,1,1);
+
+    gLayout1->addWidget(new QLabel(tr("Output file")),    11,0,1,1);
+    gLayout1->addWidget(outputFileNameLineEdit,           11,1,1,1);
+    gLayout1->addWidget(outputFileNamePushButton,         11,2,1,1);
 
     vLayout1->addWidget(new QLabel(tr("R2 Simulation")));
     vLayout1->addLayout(hLayout0);
@@ -212,6 +218,7 @@ void MainWindow::onLoadParametersPushButtonClicked()
     nStepsLineEdit->setText(settings.value("nSteps","").toString());
     nObsLineEdit->setText(settings.value("nObs","").toString());
     alLineEdit->setText(settings.value("al","").toString());
+    apodizationWidthLineEdit->setText(settings.value("Apodization width","").toString());
   settings.endGroup();
 
 }
@@ -237,6 +244,7 @@ void MainWindow::onSaveParamatersPushButtonClicked()
       settings.setValue("nSteps", nStepsLineEdit->text());
       settings.setValue("nObs", nObsLineEdit->text());
       settings.setValue("al", alLineEdit->text());
+      settings.setValue("Apodiation width", apodizationWidthLineEdit->text());
     settings.endGroup();
 
     settings.sync();
@@ -284,6 +292,11 @@ bool MainWindow::setupParams()
     d=qs.toDouble(&ok);
     if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
     else {calcThread->setSpinningSpeed(d);}
+
+    qs=apodizationWidthLineEdit->text();
+    d=qs.toDouble(&ok);
+    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
+    else {calcThread->setApodizationWidth(d);}
 
     //qs=nutationSpeedLineEdit->text();
     //d=qs.toDouble(&ok);

@@ -52,6 +52,7 @@ public:
     void setNSteps(int k) {FNSteps=k;}
     void setAl(int k) {FAl=k;}
     void setNObs(int k) {FNObs=k;}
+    void setApodizationWidth(double d) {FApodizationWidth=d;}
     double magneticField() {return FMagneticField;}
     double gammaI() {return FGammaI;}
     double gammaS() {return FGammaS;}
@@ -65,6 +66,7 @@ public:
     int nSteps() {return FNSteps;}
     int al() {return FAl;}
     int nObs() {return FNObs;}
+    double apodizationWidth() {return FApodizationWidth;}
 signals:
     void sendMessage(QString qs);
     void calcComplete();
@@ -82,6 +84,7 @@ private:
     QWaitCondition condition;
     bool volatile stopped;
 
+    double FApodizationWidth;
     double FMagneticField;
     double FGammaI;
     double FGammaS;
