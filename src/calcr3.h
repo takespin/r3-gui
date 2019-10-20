@@ -34,6 +34,7 @@ public:
         delete fid_2d;
     }
 
+    void setFID_2D(TFID_2D *f2) {fid_2d=f2;}
     void doCalc();
     void stop() { QMutexLocker locker(&mutex); stopped=true; condition.wakeAll();}
 
@@ -67,6 +68,8 @@ public:
 signals:
     void sendMessage(QString qs);
     void calcComplete();
+    void dataUpdated();
+    void xRangeUpdateRequest(int k);
 
 public slots:
 

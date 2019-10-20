@@ -28,13 +28,23 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
         fid.cpp \
+        plotter.cpp \
         metricPrefix.cpp \
+        fidDomain.cpp \
+        fft.cpp \
+        processElement.cpp \
+        applyMode.cpp \
     calcr3.cpp
 
 HEADERS += \
         mainwindow.h \
         fid.h \
+        plotter.h \
         metricPrefix.h \
+        fidDomain.h \
+        fft.h \
+        processElement.h \
+        applyMode.h \
     calcr3.h
 
 mac:INCLUDEPATH += /usr/local/include/gamma-4.3.3/
@@ -43,9 +53,14 @@ mac:LIBS += -L/usr/local/lib/gamma-4.3.3/ -lgamma -lm
 win32:INCLUDEPATH += C:/dev/gamma/src
 win32:LIBS += -L"C:\dev\gamma\i686-pc-cygwin" -llibgamma.dll -lm
 
+RC_ICONS = images/r3gui.ico
+
 QMAKE_CXXFLAGS += -O3
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    r3gui.qrc

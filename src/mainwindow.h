@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QString>
 #include "calcr3.h"
+#include "plotter.h"
+#include "fid.h"
 
 class MainWindow : public QMainWindow
 {
@@ -17,6 +19,9 @@ public:
     ~MainWindow();
     calcr3Thread *calcThread;
 
+public slots:
+    void initializePlotter();
+    void xRangeUpdate(int k);
 
 private slots:
     void onLoadParametersPushButtonClicked();
@@ -31,6 +36,9 @@ private:
     void saveParameters();
     bool calcInProgress;
     bool setupParams();
+
+    TFIDPlotters *plotters;
+    TFID_2D *FID_2D;
 
     QPushButton *loadParametersPushButton;
     QPushButton *saveParametersPushButton;

@@ -11,17 +11,30 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     calcInProgress=false;
+    FID_2D = new TFID_2D;
+    FID_2D->setAl(8192);
+
+  //  FID_2D->FID.clear();
+  //  FID_2D->setAl(al());
+    FID_2D->FID.append(new TFID(FID_2D->al()));
+    FID_2D->FID.last()->setEmpty(false);
+
 
     resize(QSize(400,600));
     createWidgets();
     createPanel();
 
+
     calcThread = new calcr3Thread;
+    calcThread->setFID_2D(FID_2D);
 
     connect(calcThread,SIGNAL(calcComplete()),this,SLOT(onStartStopButtonClicked()));
     connect(calcThread,SIGNAL(sendMessage(QString)),currentStatusLabel,SLOT(setText(QString)));
 
     connect(startStopButton,SIGNAL(clicked()),this,SLOT(onStartStopButtonClicked()));
+    connect(calcThread,SIGNAL(dataUpdated()), plotters, SLOT(update()));
+    connect(calcThread,SIGNAL(xRangeUpdateRequest(int)), this, SLOT(xRangeUpdate(int)));
+
 
 }
 
@@ -87,6 +100,16 @@ void MainWindow::createWidgets()
     startStopButton->setFixedSize(80,80);
 
     currentStatusLabel = new QLabel(tr("Current Status:"));
+
+    plotters = new TFIDPlotters;
+    plotters->setFFTEnabled(true);
+    plotters->setDevicePixelRatio(devicePixelRatio());
+    plotters->setBackgroundColor0(QColor("lavender"));
+    plotters->setBackgroundColor1(QColor("white"));
+
+    plotters->show();
+    plotters->setFID2D(FID_2D);
+    plotters->update();
 }
 
 void MainWindow::createPanel()
@@ -319,4 +342,30 @@ void MainWindow::onStartStopButtonClicked()
     startStopButton->setText("Start");
     calcInProgress=false;
   }
+}
+
+void MainWindow::initializePlotter()
+{
+    for(int k=0; k<plotters->FIDPlotters.size(); k++)
+    {
+        plotters->FIDPlotters[k]->plotter->xini=0;
+        plotters->FIDPlotters[k]->plotter->xfin=FID_2D->al()-1;
+        plotters->FIDPlotters[k]->plotter->setScale(1/FID_2D->FID[0]->abs->absMax());
+        plotters->FIDPlotters[k]->FIDSelectSpinBox->setMinimum(1);
+        plotters->FIDPlotters[k]->FIDSelectSpinBox->setMaximum(FID_2D->FID.size());
+
+        plotters->FIDPlotters[k]->xFullRangePlot();
+    }
+
+}
+
+void MainWindow::xRangeUpdate(int k)
+{
+    for(int k=0; k<plotters->FIDPlotters.size(); k++)
+    {
+
+        plotters->FIDPlotters[k]->xFullRangePlot();
+
+    }
+
 }
