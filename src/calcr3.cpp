@@ -238,7 +238,7 @@ void calcr3Thread::run()
     fid_2d->FID[0]->updateAbs();
 
     QString mes= //"a:"+QString::number(alpha) +
-               ",beta: "+QString::number(beta) +", gamma: "+QString::number(gamma);
+               "beta: "+QString::number(beta) +", gamma: "+QString::number(gamma);
     emit sendMessage(mes);
     emit dataUpdated();
 
