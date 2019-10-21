@@ -5,32 +5,98 @@
 #include <QFileDialog>
 #include <QSettings>
 #include <QDebug>
+#include <QCoreApplication>
 #include "math.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    // By default, the path to the parameter file and the data file are set to the application directory path.
+    // Later on, we will overwrite the path by the last used directory (in loadSettings)
+    setParameterFilePath(QCoreApplication::applicationDirPath());
+    setDataFilePath(QCoreApplication::applicationDirPath());
+
     calcInProgress=false;
+    FID_2D = new TFID_2D;
+    FID_2D->setAl(8192);
+    FID_2D->FID.append(new TFID(FID_2D->al()));
+    FID_2D->FID.last()->setEmpty(false);
+
 
     resize(QSize(400,600));
     createWidgets();
     createPanel();
 
+    loadSettings();
+
+
     calcThread = new calcr3Thread;
+    calcThread->setFID_2D(FID_2D);
 
     connect(calcThread,SIGNAL(calcComplete()),this,SLOT(onStartStopButtonClicked()));
     connect(calcThread,SIGNAL(sendMessage(QString)),currentStatusLabel,SLOT(setText(QString)));
 
     connect(startStopButton,SIGNAL(clicked()),this,SLOT(onStartStopButtonClicked()));
+    connect(calcThread,SIGNAL(dataUpdated()), plotters, SLOT(update()));
+    connect(calcThread,SIGNAL(xRangeUpdateRequest(int)), this, SLOT(xRangeUpdate(int)));
+
 
 }
 
 MainWindow::~MainWindow()
 {
-
+    // Before quitting the application, we save settings for the next run.
+    saveSettings();
     delete calcThread;
 }
 
+void MainWindow::saveSettings()
+{
+    QString iniFileName=QCoreApplication::applicationDirPath()+"/settings.ini";
+    // Note that Qt automatically converts "/" to "\" in Windows.
+
+    QSettings settings(iniFileName, QSettings::IniFormat);
+    settings.beginGroup("MainWindow");
+//      settings.setValue("size", size());
+      settings.setValue("position", pos());
+    settings.endGroup();
+
+    settings.beginGroup("Plotter");
+      settings.setValue("size", plotters->size());
+      settings.setValue("position", plotters->pos());
+    settings.endGroup();
+
+    settings.beginGroup("Paths");
+      settings.setValue("parameterFilePath", parameterFilePath());
+      settings.setValue("dataFilePath", dataFilePath());
+    settings.endGroup();
+
+    settings.sync();
+
+}
+
+void MainWindow::loadSettings()
+{
+    QString iniFileName=QCoreApplication::applicationDirPath()+"/settings.ini";
+    if(!QFile::exists(iniFileName)) return;
+    QSettings settings(iniFileName, QSettings::IniFormat);
+
+    settings.beginGroup("MainWindow");
+//      resize(settings.value("size", QSize(1000, 600)).toSize());
+      move(settings.value("position", QPoint(100, 100)).toPoint());
+    settings.endGroup();
+
+    settings.beginGroup("Plotter");
+      plotters->move(settings.value("position",QPoint(100,100)).toPoint());
+      plotters->resize(settings.value("size",QSize(600,400)).toSize());
+    settings.endGroup();
+
+    settings.beginGroup("Paths");
+      setParameterFilePath(settings.value("parameterFilePath",QCoreApplication::applicationDirPath()).toString());
+      setDataFilePath(settings.value("dataFilePath",QCoreApplication::applicationDirPath()).toString());
+    settings.endGroup();
+
+}
 
 void MainWindow::createWidgets()
 {
@@ -76,6 +142,8 @@ void MainWindow::createWidgets()
     alLineEdit = new QLineEdit();
     alLineEdit->setAlignment(Qt::AlignRight);
 
+    apodizationWidthLineEdit = new QLineEdit();
+    apodizationWidthLineEdit->setAlignment(Qt::AlignRight);
 
     outputFileNameLineEdit = new QLineEdit();
     outputFileNameLineEdit->setAlignment(Qt::AlignRight);
@@ -87,6 +155,17 @@ void MainWindow::createWidgets()
     startStopButton->setFixedSize(80,80);
 
     currentStatusLabel = new QLabel(tr("Current Status:"));
+
+    plotters = new TFIDPlotters;
+    plotters->setFFTEnabled(true);
+    plotters->setDevicePixelRatio(devicePixelRatio());
+    plotters->setBackgroundColor0(QColor("lavender"));
+    plotters->setBackgroundColor1(QColor("white"));
+
+    plotters->show();
+    plotters->raise();
+    plotters->setFID2D(FID_2D);
+    plotters->update();
 }
 
 void MainWindow::createPanel()
@@ -146,13 +225,17 @@ void MainWindow::createPanel()
     gLayout1->addWidget(new QLabel(tr("Number of data points")), 8,0,1,1);
     gLayout1->addWidget(alLineEdit,                              8,1,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Angle increment")), 9,0,1,1);
-    gLayout1->addWidget(angleIncrementLineEdit,            9,1,1,1);
-    gLayout1->addWidget(new QLabel(tr("deg")),             9,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Apodization width")), 9,0,1,1);
+    gLayout1->addWidget(apodizationWidthLineEdit,            9,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("Hz")),                9,2,1,1);
 
-    gLayout1->addWidget(new QLabel(tr("Output file")),    10,0,1,1);
-    gLayout1->addWidget(outputFileNameLineEdit,           10,1,1,1);
-    gLayout1->addWidget(outputFileNamePushButton,         10,2,1,1);
+    gLayout1->addWidget(new QLabel(tr("Angle increment")), 10,0,1,1);
+    gLayout1->addWidget(angleIncrementLineEdit,            10,1,1,1);
+    gLayout1->addWidget(new QLabel(tr("deg")),             10,2,1,1);
+
+    gLayout1->addWidget(new QLabel(tr("Output file")),    11,0,1,1);
+    gLayout1->addWidget(outputFileNameLineEdit,           11,1,1,1);
+    gLayout1->addWidget(outputFileNamePushButton,         11,2,1,1);
 
     vLayout1->addWidget(new QLabel(tr("R2 Simulation")));
     vLayout1->addLayout(hLayout0);
@@ -171,8 +254,13 @@ void MainWindow::createPanel()
 
 void MainWindow::onLoadParametersPushButtonClicked()
 {
-  QString fileName = QFileDialog::getOpenFileName(this,tr("Open parameter file"));
+
+  QString fileName = QFileDialog::getOpenFileName(this, tr("Open parameter file"), parameterFilePath());
+
   if (fileName.isNull()) return;
+
+  QFileInfo fi(fileName);
+  setParameterFilePath(fi.absolutePath());
 
   QSettings settings(fileName, QSettings::IniFormat);
   settings.beginGroup("r2");
@@ -189,6 +277,7 @@ void MainWindow::onLoadParametersPushButtonClicked()
     nStepsLineEdit->setText(settings.value("nSteps","").toString());
     nObsLineEdit->setText(settings.value("nObs","").toString());
     alLineEdit->setText(settings.value("al","").toString());
+    apodizationWidthLineEdit->setText(settings.value("Apodization width","").toString());
   settings.endGroup();
 
 }
@@ -196,8 +285,10 @@ void MainWindow::onLoadParametersPushButtonClicked()
 void MainWindow::onSaveParamatersPushButtonClicked()
 {
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save parameter file"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save parameter file"), parameterFilePath());
     if (fileName.isNull()) return;
+    QFileInfo fi(fileName);
+    setParameterFilePath(fi.absolutePath());
 
     QSettings settings(fileName, QSettings::IniFormat);
     settings.beginGroup("r2");
@@ -214,6 +305,7 @@ void MainWindow::onSaveParamatersPushButtonClicked()
       settings.setValue("nSteps", nStepsLineEdit->text());
       settings.setValue("nObs", nObsLineEdit->text());
       settings.setValue("al", alLineEdit->text());
+      settings.setValue("Apodization width", apodizationWidthLineEdit->text());
     settings.endGroup();
 
     settings.sync();
@@ -262,6 +354,11 @@ bool MainWindow::setupParams()
     if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
     else {calcThread->setSpinningSpeed(d);}
 
+    qs=apodizationWidthLineEdit->text();
+    d=qs.toDouble(&ok);
+    if(!ok) {currentStatusLabel->setText("Invalid expression: " + qs); return false;}
+    else {calcThread->setApodizationWidth(d);}
+
     //qs=nutationSpeedLineEdit->text();
     //d=qs.toDouble(&ok);
     //if(!ok) {currentStatusLabel->setText("Invalid expression: 7" + qs); return false;}
@@ -294,10 +391,13 @@ bool MainWindow::setupParams()
 
 void MainWindow::onOutputFileNamePushButtonClicked()
 {
-  QString filename = QFileDialog::getSaveFileName(this, tr("Output file"));
-  if(filename.isNull()) return;
+  QString fileName = QFileDialog::getSaveFileName(this, tr("Output file"));
+  if(fileName.isNull()) return;
 
-  outputFileNameLineEdit->setText(filename);
+  QFileInfo fi(fileName);
+  setDataFilePath(fi.absolutePath());
+
+  outputFileNameLineEdit->setText(fileName);
 
 }
 
@@ -319,4 +419,30 @@ void MainWindow::onStartStopButtonClicked()
     startStopButton->setText("Start");
     calcInProgress=false;
   }
+}
+
+void MainWindow::initializePlotter()
+{
+    for(int k=0; k<plotters->FIDPlotters.size(); k++)
+    {
+        plotters->FIDPlotters[k]->plotter->xini=0;
+        plotters->FIDPlotters[k]->plotter->xfin=FID_2D->al()-1;
+        plotters->FIDPlotters[k]->plotter->setScale(1/FID_2D->FID[0]->abs->absMax());
+        plotters->FIDPlotters[k]->FIDSelectSpinBox->setMinimum(1);
+        plotters->FIDPlotters[k]->FIDSelectSpinBox->setMaximum(FID_2D->FID.size());
+
+        plotters->FIDPlotters[k]->xFullRangePlot();
+    }
+
+}
+
+void MainWindow::xRangeUpdate(int k)
+{
+    for(int k=0; k<plotters->FIDPlotters.size(); k++)
+    {
+
+        plotters->FIDPlotters[k]->xFullRangePlot();
+
+    }
+
 }

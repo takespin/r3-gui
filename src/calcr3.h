@@ -34,6 +34,7 @@ public:
         delete fid_2d;
     }
 
+    void setFID_2D(TFID_2D *f2) {fid_2d=f2;}
     void doCalc();
     void stop() { QMutexLocker locker(&mutex); stopped=true; condition.wakeAll();}
 
@@ -51,6 +52,8 @@ public:
     void setNSteps(int k) {FNSteps=k;}
     void setAl(int k) {FAl=k;}
     void setNObs(int k) {FNObs=k;}
+    void setApodizationWidth(double d) {FApodizationWidth=d;}
+    void setPriority(QThread::Priority p) {FPriority=p;}
     double magneticField() {return FMagneticField;}
     double gammaI() {return FGammaI;}
     double gammaS() {return FGammaS;}
@@ -64,9 +67,14 @@ public:
     int nSteps() {return FNSteps;}
     int al() {return FAl;}
     int nObs() {return FNObs;}
+    double apodizationWidth() {return FApodizationWidth;}
+    QThread::Priority priority() {return FPriority;}
+
 signals:
     void sendMessage(QString qs);
     void calcComplete();
+    void dataUpdated();
+    void xRangeUpdateRequest(int k);
 
 public slots:
 
@@ -78,7 +86,9 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool volatile stopped;
+    QThread::Priority FPriority;
 
+    double FApodizationWidth;
     double FMagneticField;
     double FGammaI;
     double FGammaS;
