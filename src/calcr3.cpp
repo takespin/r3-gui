@@ -6,6 +6,7 @@
 calcr3Thread::calcr3Thread()
 {
     fid_2d = new TFID_2D();
+    setPriority(QThread::NormalPriority);
 
 }
 
@@ -16,7 +17,7 @@ void calcr3Thread::doCalc()
   stopped=false;
   if(!isRunning())
   {
-    start(HighPriority);
+    start(priority());
   }
   else
   {
@@ -81,9 +82,12 @@ bool calcr3Thread::prepareCalc()
     fid_2d->FID.clear();
     fid_2d->setAl(al());
     fid_2d->FID.append(new TFID(al()));
+    fid_2d->FID.last()->setEmpty(false);
     double dt=1.0/(1000*spinningSpeed()*nSteps());
     fid_2d->setDW(dt*nObs()*1e6);
     fid_2d->setSF1(magneticField()*gammaS());
+
+    emit xRangeUpdateRequest(al());
 
     return true;
 }
@@ -109,10 +113,10 @@ void calcr3Thread::run()
 
     for(double alpha=0; alpha<360; alpha+=360)//angleIncrement())
     {
-    for(double beta=0; beta<180; beta+=angleIncrement())
+    for(double beta=angleIncrement(); beta<180; beta+=angleIncrement())
     {
       scale = sin(PI*beta/180.0);
-    for(double gamma=0; gamma<360; gamma+=angleIncrement())
+    for(double gamma=0; gamma<360; gamma+=angleIncrement()/scale)
     {
 
         if(stopped) return;
@@ -156,6 +160,8 @@ void calcr3Thread::run()
         cal=0;
         q=0;
         complex cdat;
+
+        double w;
 
         rho  = Fx(ax,"13C");
         detect = Fm(ax,"13C");
@@ -210,9 +216,16 @@ void calcr3Thread::run()
             break;
 
           case B1:
-            cdat = proj(rho,detect)*scale;
-            fid_2d->FID[0]->real->sig[cal] += cdat.real();
-            fid_2d->FID[0]->imag->sig[cal] += cdat.imag();
+//            cdat = proj(rho,detect)*scale;
+            cdat = proj(rho,detect);
+
+            // Gaussian apodization
+            w=exp(-cal*cal*(fid_2d->dw()/1000000.0)*(fid_2d->dw()/1000000.0)*apodizationWidth()*apodizationWidth()*3.55971);
+                                     // (2pi) ^2/(16 ln2) = 3.55971
+
+
+            fid_2d->FID[0]->real->sig[cal] += w * cdat.real();
+            fid_2d->FID[0]->imag->sig[cal] += w * cdat.imag();
             cal++;
             if (cal==al()) {cal=0; currentState=E;} else {currentState=L2;}
             break;
@@ -222,12 +235,12 @@ void calcr3Thread::run()
         }  // switch
         } // while (currentState!=E)
 
+    fid_2d->FID[0]->updateAbs();
 
-
-    QString mes= "a:"+QString::number(alpha)
-               +",b:"+QString::number(beta)
-               +",g:"+QString::number(gamma);
+    QString mes= //"a:"+QString::number(alpha) +
+               "beta: "+QString::number(beta) +", gamma: "+QString::number(gamma);
     emit sendMessage(mes);
+    emit dataUpdated();
 
     mutex.lock();
     fid_2d->WriteopFiles(fileName());

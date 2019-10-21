@@ -1,13 +1,15 @@
 [r2]
 Angle%20increment=10
+Apodiation%20width=10
+Apodization%20width=20
 Distance=1.525
 Gyromagnetic%20ratio%20%28I%29=10.708
 Gyromagnetic%20ratio%20%28S%29=10.708
 Isotropic%20shift%20%28I%29=-5054
 Isotropic%20shift%20%28S%29=7813
 Nutation%20speed=
-Output%20filename=/Users/takezo/Documents/GitHub/takespin/r3-gui/Untitled
-Spinning%20speed=6.42
+Output%20filename=/Users/takezo/Documents/GitHub/takespin/Untitled
+Spinning%20speed=6.4335
 al=1024
 nObs=5
 nSteps=20
