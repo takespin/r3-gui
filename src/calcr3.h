@@ -53,6 +53,7 @@ public:
     void setAl(int k) {FAl=k;}
     void setNObs(int k) {FNObs=k;}
     void setApodizationWidth(double d) {FApodizationWidth=d;}
+    void setPriority(QThread::Priority p) {FPriority=p;}
     double magneticField() {return FMagneticField;}
     double gammaI() {return FGammaI;}
     double gammaS() {return FGammaS;}
@@ -67,6 +68,8 @@ public:
     int al() {return FAl;}
     int nObs() {return FNObs;}
     double apodizationWidth() {return FApodizationWidth;}
+    QThread::Priority priority() {return FPriority;}
+
 signals:
     void sendMessage(QString qs);
     void calcComplete();
@@ -83,6 +86,7 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool volatile stopped;
+    QThread::Priority FPriority;
 
     double FApodizationWidth;
     double FMagneticField;

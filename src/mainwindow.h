@@ -18,18 +18,26 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
     calcr3Thread *calcThread;
+    QString parameterFilePath() {return FParameterFilePath;}
+    QString dataFilePath() {return FDataFilePath;}
 
 public slots:
     void initializePlotter();
     void xRangeUpdate(int k);
+    void saveSettings();
+    void loadSettings();
 
 private slots:
     void onLoadParametersPushButtonClicked();
     void onSaveParamatersPushButtonClicked();
     void onOutputFileNamePushButtonClicked();
     void onStartStopButtonClicked();
+    void setParameterFilePath(QString qs) {FParameterFilePath=qs;}
+    void setDataFilePath(QString qs) {FDataFilePath=qs;}
 
 private:
+    QString FParameterFilePath;
+    QString FDataFilePath;
     void createWidgets();
     void createPanel();
     void loadParameters();

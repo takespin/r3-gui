@@ -6,6 +6,7 @@
 calcr3Thread::calcr3Thread()
 {
     fid_2d = new TFID_2D();
+    setPriority(QThread::NormalPriority);
 
 }
 
@@ -16,7 +17,7 @@ void calcr3Thread::doCalc()
   stopped=false;
   if(!isRunning())
   {
-    start(NormalPriority);
+    start(priority());
   }
   else
   {
@@ -236,9 +237,8 @@ void calcr3Thread::run()
 
     fid_2d->FID[0]->updateAbs();
 
-    QString mes= "a:"+QString::number(alpha)
-               +",b:"+QString::number(beta)
-               +",g:"+QString::number(gamma);
+    QString mes= //"a:"+QString::number(alpha) +
+               ",beta: "+QString::number(beta) +", gamma: "+QString::number(gamma);
     emit sendMessage(mes);
     emit dataUpdated();
 
