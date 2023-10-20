@@ -21,6 +21,7 @@
 #include <QPushButton>
 
 #include "fid.h"
+#include "dataProcess/fft.h"
 //#include "dataProcess/processOperations.h"
 //#include "dataProcess/processPanelWidget.h"
 
@@ -53,12 +54,14 @@ class plotterDetailsWidget: public QWidget
 {
     Q_OBJECT
 public:
-    plotterDetailsWidget(QWidget *parent = 0);
+    plotterDetailsWidget(QWidget *parent = nullptr);
     QComboBox *detailsComboBox;
     QSpinBox *xIniSpinBox,*xFinSpinBox;
     QLineEdit *xIniValLineEdit,*xFinValLineEdit;
     QLabel *xIniUnitLabel,*xFinUnitLabel;
     QPushButton *xFullRangePushButton;
+
+    QDoubleSpinBox * vOffsetSpinBox;
 
     QPlainTextEdit *deltaInfoTextEdit;
    // QSpinBox *xPosSpinBox;
@@ -66,6 +69,8 @@ public:
 signals:
     void xPlotRangeUpdateRequest(int i, int f);
     void xCursorPositionUpdateRequest(int xi);
+    void xInitialValueUpdateRequest(double d);
+    void xFinalValueUpdateRequest(double d);
 
 public slots:
     void setCursorInfo(QStringList sl);
@@ -104,7 +109,7 @@ public:
       //  if(f==CartesianPlot) bottomMargin=40; else bottomMargin=0;
     }
 
-    Plotter(QWidget *parent = 0);
+    Plotter(QWidget *parent = nullptr);
     ~Plotter();
     
     void setPlotSettings(const PlotSettings &settings);
@@ -126,13 +131,6 @@ public:
 
     TFID *fid;
     TFID *localFID;
-
-    int xini;
-    int xfin;
-    int vCenter;
-    int vOffset() {return FvOffset;}
-    void setVOffset(int v) {FvOffset=v;}
-
     QPixmap pixmap;
 
     int Margin;
@@ -140,6 +138,22 @@ public:
     int bottomMargin;
     int leftMargin;
     int rightMargin;
+
+    int xini;
+    int xfin;
+    int vCenter;
+    int vOffset() {return FvOffset;}
+    void setVOffset(int v) {FvOffset=v;}
+
+    double vOffsetRatio() {return FvOffsetRatio;}
+    void setVOffsetRatio(double d) {
+        FvOffsetRatio=d;
+        setVOffset(round(
+                       (0.5-d)*(rect().height()-topMargin-bottomMargin)
+                       )
+                   );
+    }
+
 
     static double tic(double min, double max);
 
@@ -151,6 +165,7 @@ public:
     double scale() {return Fscale;}
     void setScale(double s) {Fscale=s;}
 
+
     int penWidth() {return FPenWidth;}
 
     QColor backgroundColor0() {return FBackgroundColor0;}
@@ -158,6 +173,16 @@ public:
     void setBackgroundColor0(QColor col) {FBackgroundColor0=col;}
     void setBackgroundColor1(QColor col) {FBackgroundColor1=col;}
 
+    QColor realColor() {return FRealColor;}
+    QColor imagColor() {return FImagColor;}
+    QColor absColor() {return FAbsColor;}
+    QColor polarColor() {return FPolarColor;}
+    void setRealColor(QColor col) {FRealColor=col;}
+    void setImagColor(QColor col) {FImagColor=col;}
+    void setAbsColor(QColor col) {FAbsColor=col;}
+    void setPolarColor(QColor col) {FPolarColor=col;}
+
+    bool wheelToHScroll() {return FWheelToHScroll;}
 
 signals:
     void rubberBandActionRequest(bool b);
@@ -176,7 +201,7 @@ signals:
 public slots:
     void updatePlotRange(int i, int f);
     void updateXCursorPosition(int xi);
-    void setPenWidth(int w) {if(w<1)FPenWidth=1; else if(w>10)FPenWidth=10; else FPenWidth=w;}
+    void setPenWidth(int w) {if(w<1)FPenWidth=1; else FPenWidth=w;}
     void hExpand();
     void hShrink();
     void moveRight();
@@ -194,7 +219,7 @@ public slots:
     void setVCursorIsShown(bool b) {FvCursorIsShown=b;}
     void setRubberBandIsShown(bool b) {FrubberBandIsShown=b;}
     void setBitLineIsShown(bool b) {FbitLineIsShown=b;}
-
+    void setWheelToHScroll(bool b) {FWheelToHScroll=b;}
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -207,6 +232,8 @@ protected:
 
 private:
     QColor FBackgroundColor0, FBackgroundColor1;
+    QColor FRealColor,FImagColor,FAbsColor;
+    QColor FPolarColor;
     TPlotFormat FplotFormat;
     void drawBitLines(QPainter *painter);
     void updateRubberBandRegion();
@@ -234,6 +261,7 @@ private:
     bool FbitLineIsShown;
 
     int FvOffset;
+    double FvOffsetRatio;
 
     int curZoom;
     QRect rubberBandRect;
@@ -259,6 +287,7 @@ private:
     int FPenWidth;
 
     int FDevicePixelRatio;
+    bool FWheelToHScroll;
 };
 
 class PlotSettings
@@ -304,7 +333,7 @@ class TFIDPlotters : public QWidget
 public:
     enum PlotSplitMode {Horizontal,Vertical,NewWindow,RemoveSplit};
 
-    TFIDPlotters(QWidget *parent=0);
+    TFIDPlotters(QWidget *parent=nullptr);
     ~TFIDPlotters();
     QList<FIDPlotter*> FIDPlotters;
     QList<QSplitter*> plotSplitters;
@@ -323,6 +352,16 @@ public:
     void setBackgroundColor0(QColor col);
     void setBackgroundColor1(QColor col);
 
+    QColor realColor() {return FRealColor;}
+    QColor imagColor() {return FImagColor;}
+    QColor absColor() {return FAbsColor;}
+    QColor polarColor() {return FPolarColor;}
+    void setRealColor(QColor col);
+    void setImagColor(QColor col);
+    void setAbsColor(QColor col);
+    void setPolarColor(QColor col);
+
+
 signals:
     //void splitPlotUpdated(int nOfPlotters);
     void numberOfPlottersUpdated(int nOfPlotters);
@@ -340,6 +379,8 @@ private:
     bool FisFFTEnabled;
     int FN;
     QColor FBackgroundColor0,FBackgroundColor1;
+    QColor FRealColor,FImagColor,FAbsColor;
+    QColor FPolarColor;
 
 };
 
@@ -350,11 +391,12 @@ class FIDPlotter : public QWidget
 {
     Q_OBJECT
 public:
-    FIDPlotter(QWidget *parent=0);
+    FIDPlotter(QWidget *parent=nullptr);
     void setDevicePixelRatio(int r);
     int devicePixelRatio() {return FDevicePixelRatio;}
     Plotter *plotter;
     QComboBox *scaleComboBox;
+    QCheckBox *wheelToHScrollCheckBox;
     QComboBox *formatComboBox;
     TFID_2D *fid2d;
     QSpinBox *FIDSelectSpinBox;
@@ -402,6 +444,10 @@ public slots:
     void update();
     void setVCursor(bool b);
     void xFullRangePlot();
+    void updateXInitialValue(double d);
+    void updateXFinalValue(double d);
+    void updateVOffset(double voffset);
+    void onWheelToHScrollCheckBoxStateChanged();
 
 private slots:
     void setRubberBand(bool b);

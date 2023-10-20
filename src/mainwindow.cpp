@@ -18,8 +18,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     calcInProgress=false;
     FID_2D = new TFID_2D;
-    FID_2D->setAl(8192);
-    FID_2D->FID.append(new TFID(FID_2D->al()));
+    FID_2D->setDefaultAl(8192);
+    FID_2D->FID.append(new TFID(FID_2D->defaultAl()));
     FID_2D->FID.last()->setEmpty(false);
 
 
@@ -161,7 +161,9 @@ void MainWindow::createWidgets()
     plotters->setDevicePixelRatio(devicePixelRatio());
     plotters->setBackgroundColor0(QColor("lavender"));
     plotters->setBackgroundColor1(QColor("white"));
-
+    plotters->setRealColor(QColor("deeppink"));
+    plotters->setImagColor(QColor("green"));
+    plotters->setAbsColor(QColor("blue"));
     plotters->show();
     plotters->raise();
     plotters->setFID2D(FID_2D);
@@ -426,7 +428,7 @@ void MainWindow::initializePlotter()
     for(int k=0; k<plotters->FIDPlotters.size(); k++)
     {
         plotters->FIDPlotters[k]->plotter->xini=0;
-        plotters->FIDPlotters[k]->plotter->xfin=FID_2D->al()-1;
+        plotters->FIDPlotters[k]->plotter->xfin=FID_2D->defaultAl()-1;
         plotters->FIDPlotters[k]->plotter->setScale(1/FID_2D->FID[0]->abs->absMax());
         plotters->FIDPlotters[k]->FIDSelectSpinBox->setMinimum(1);
         plotters->FIDPlotters[k]->FIDSelectSpinBox->setMaximum(FID_2D->FID.size());

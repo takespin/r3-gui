@@ -80,7 +80,7 @@ bool calcr3Thread::prepareCalc()
     }
 
     fid_2d->FID.clear();
-    fid_2d->setAl(al());
+    fid_2d->setDefaultAl(al());
     fid_2d->FID.append(new TFID(al()));
     fid_2d->FID.last()->setEmpty(false);
     double dt=1.0/(1000*spinningSpeed()*nSteps());
@@ -103,13 +103,14 @@ void calcr3Thread::run()
     if (stopped) return;
     if (!prepareCalc()) return;
 
-    int i,j,k,q,cobs,cal,cevolve; // counter
+    int i,j,k,cobs,cal,cevolve; // counter
     int nevolve=20;
 
     const double thetam=54.73561032;  // magic angle
 
     double t; // current time and time increment in us
     double scale;  // a weight factor
+
 
     for(double alpha=0; alpha<360; alpha+=360)//angleIncrement())
     {
@@ -158,7 +159,7 @@ void calcr3Thread::run()
         cevolve=0;
         cobs=0;
         cal=0;
-        q=0;
+
         complex cdat;
 
         double w;

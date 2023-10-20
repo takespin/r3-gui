@@ -30,10 +30,10 @@ SOURCES += \
         fid.cpp \
         plotter.cpp \
         metricPrefix.cpp \
-        fidDomain.cpp \
-        fft.cpp \
-        processElement.cpp \
-        applyMode.cpp \
+        dataProcess/fidDomain.cpp \
+        dataProcess/fft.cpp \
+        dataProcess/processElement.cpp \
+        dataProcess/applyMode.cpp \
     calcr3.cpp
 
 HEADERS += \
@@ -41,10 +41,10 @@ HEADERS += \
         fid.h \
         plotter.h \
         metricPrefix.h \
-        fidDomain.h \
-        fft.h \
-        processElement.h \
-        applyMode.h \
+        dataProcess/fidDomain.h \
+        dataProcess/fft.h \
+        dataProcess/processElement.h \
+        dataProcess/applyMode.h \
     calcr3.h
 
 mac:INCLUDEPATH += /usr/local/include/gamma-4.3.3/

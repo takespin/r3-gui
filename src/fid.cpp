@@ -33,38 +33,243 @@ bool TFID_2D::ReadsmdFile(QString fn)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString smd = path+base+".smd";
 
-    TFID *bFID=new TFID(2);
-    if(!bFID->ReadsmdFile(smd))
+    // qDebug()<< "1";
+
+    QMutexLocker locker(&mutex);
+
+    QFile file(fn);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        errorMessage=bFID->errorMessage;
-        delete bFID;
-        return false;
+         errorMessage=QString(Q_FUNC_INFO)+ ": Failed to open " + fn;
+         return false;
     }
+
+    QString source; source.clear();
+    QTextStream in(&file);
+
+    bool pointDefined=false;
+    bool dwDefined=false;
+    bool sf1Defined=false;
+
+    bool ok;
+
+    parameters.clear();
+
+    while (!in.atEnd())
+    {
+        source=in.readLine();
+        source.remove(QChar(' '), Qt::CaseInsensitive);
+        if(source.startsWith('#')) break;
+        parameters.append(source);
+
+        if(source.startsWith("point=",Qt::CaseInsensitive))
+        {
+            pointDefined=true;
+            int i=source.mid(6).toInt(&ok);
+            if(!ok) {errorMessage="Invalid expression for point="; file.close(); return false;}
+            setDefaultAl(i);
+        }
+        if(source.startsWith("dw=",Qt::CaseInsensitive))
+        {
+            dwDefined=true;
+            double d=source.mid(3).toDouble(&ok);
+            if(!ok) {errorMessage="Invalid expression for dw="; file.close(); return false;}
+            setDW(d);
+        }
+        if(source.startsWith("sf1=",Qt::CaseInsensitive))
+        {
+            sf1Defined=true;
+            double s=source.mid(4).toDouble(&ok);
+            if(!ok) {errorMessage="Invalid expression for sf1="; file.close(); return false;}
+            setSF1(s);
+        }
+
+    }
+
+    if(!pointDefined)
+    {
+        errorMessage="point=xxx is missing.";  file.close(); return false;
+    }
+    if(!dwDefined)
+    {
+        errorMessage="dw=xxx is missing.";  file.close(); return false;
+    }
+    if(!sf1Defined)
+    {
+        errorMessage="sf1=xxx is missing.";  file.close(); return false;
+    }
+
+//    qDebug() << defaultAl() << dw() << sf1() ;
 
     FID.clear();
-    FID.append(new TFID(bFID->al()));
-    for(int k=0; k<bFID->al(); k++)
-    {
-        FID.last()->real->sig[k]=bFID->real->sig.at(k);
-        FID.last()->imag->sig[k]=bFID->imag->sig.at(k);
-    }
-    FID.last()->updateAbs();
+    FID.append(new TFID(defaultAl()));
+    FID.last()->setDW(dw());
+    FID.last()->setSF1(sf1());
 
-    delete bFID;
+    QString line;
+    QStringList sl;
+    for(int k=0; k<defaultAl(); k++)
+    {
+        if(in.atEnd())
+        {
+            errorMessage="Data is shorter than " + QString::number(defaultAl());
+            file.close(); return false;
+        }
+
+        line = in.readLine();
+        line=line.trimmed();
+        line.replace("\t"," ");
+        ok=line.contains("  ");
+        while(ok)
+        {
+            line.replace("  "," ");
+            ok=line.contains("  ");
+        }
+
+        sl=line.split(' ');
+        if(sl.size()<1)
+        {
+            errorMessage = "Data is empty at " + QString::number(k);
+            file.close(); return false;
+        }
+
+        if(sl.size()==1)
+        {
+            FID[0]->real->sig[k]=sl.at(0).toDouble();
+            FID[0]->imag->sig[k]=0.0;
+        }
+        else
+        {
+            FID[0]->real->sig[k]=sl.at(0).toDouble();
+            FID[0]->imag->sig[k]=sl.at(1).toDouble();
+        }
+
+    }
+
+
+    file.close();
+
+    FID.last()->updateAbs();
+    FID.last()->setEmpty(false);
+
+    comments.clear();
+
+    setCurrentFID(0);
+
     return true;
 
 }
 
+bool TFID_2D::ReadopaFile(QString fn)
+// still incomplete... (6 Jul 2020 KT)
+{
+    QMutexLocker locker(&mutex);
+
+    QFile file(fn);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+         errorMessage=QString(Q_FUNC_INFO)+ ": Failed to open " + fn;
+         return false;
+    }
+
+    QString source; source.clear();
+    QTextStream in(&file);
+
+    bool ok;
+    QString line;
+    QStringList sl;
+
+    FID.append(new TFID(defaultAl()));
+    FID[FID.size()-1]->setSF1(sf1());
+    FID[FID.size()-1]->setDW(dw());
+
+    int k=0;
+
+    while(k<defaultAl())
+    {
+//    for(int k=0; k<al(); k++)
+//    {
+        if(in.atEnd())
+        {
+            errorMessage="Data is shorter than " + QString::number(defaultAl());
+            file.close(); return false;
+        }
+
+        line = in.readLine();
+        line=line.trimmed();
+        line.replace("\t"," ");
+        ok=line.contains("  ");
+        while(ok)
+        {
+            line.replace("  "," ");
+            ok=line.contains("  ");
+        }
+
+        sl=line.split(' ');
+        if(sl.size()<1)
+        {
+            errorMessage = "Data is empty at " + QString::number(k);
+            file.close(); return false;
+        }
+
+        if(sl.size()==1)
+        {
+            FID.last()->real->sig[k]=sl.at(0).toDouble();
+            FID.last()->imag->sig[k]=0.0;
+        }
+        else
+        {
+            FID.last()->real->sig[k]=sl.at(0).toDouble();
+            FID.last()->imag->sig[k]=sl.at(1).toDouble();
+        }
+
+        k++;
+    }
+
+    FID.last()->updateAbs();
+    FID.last()->setCustomXAxis(isXAxisCustom());
+    FID.last()->setXInitialValue(xInitialValue());
+    FID.last()->setDx(dx());
+    FID.last()->setXAxisLabel(xAxisLabel());
+    FID.last()->setXAxisUnitSymbol(xAxisUnitSymbol());
+    FID.last()->setPrefix(prefix());
+    FID.last()->setPlotPrefix(plotPrefix());
+    FID.last()->setDomain(TFID::TimeDomain);
+
+    FID.last()->setEmpty(false);
+
+
+
+
+    file.close();
+    setCurrentFID(0);
+    return true;
+}
+
+bool TFID_2D::ReadopaFiles(QString fn)
+{
+    QFileInfo fi;
+    fi.setFile(fn);
+    QString base = fi.completeBaseName();
+    QString path = fi.absolutePath()+'/';
+    QString opp = path+base+".opp";
+    QString opa = path+base+".opa";
+
+    if(!ReadoppFile(opp)) return false;
+    if(!ReadopaFile(opa)) return false;
+
+    return true;
+}
 
 bool TFID_2D::ReadopFiles(QString fn)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString opp = path+base+".opp";
     QString opd = path+base+".opd";
@@ -80,7 +285,7 @@ bool TFID_2D::Readsm2Files(QString fn)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString sm2p = path+base+".sm2p";
     QString sm2d = path+base+".sm2d";
@@ -91,32 +296,32 @@ bool TFID_2D::Readsm2Files(QString fn)
     return true;
 }
 
-bool TFID_2D::WriteopFiles(QString fn)
+bool TFID_2D::WriteopFiles(QString fn, QIODevice::OpenModeFlag flag)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString opp = path+base+".opp";
     QString opd = path+base+".opd";
 
     if(!WriteoppFile(opp)) return false;
-    if(!WriteopdFile(opd)) return false;
+    if(!WriteopdFile(opd,flag)) return false;
 
     return true;
 }
 
-bool TFID_2D::Writesm2Files(QString fn)
+bool TFID_2D::Writesm2Files(QString fn, QIODevice::OpenModeFlag flag)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString sm2p = path+base+".sm2p";
     QString sm2d = path+base+".sm2d";
 
     if(!Writesm2pFile(sm2p)) return false;
-    if(!Writesm2dFile(sm2d)) return false;
+    if(!Writesm2dFile(sm2d,flag)) return false;
 
     return true;
 }
@@ -344,14 +549,14 @@ bool TFID_2D::WriteoppFile(QString fn)
     }
 
     QTextStream out(&file);
-    out << "point=" << QString::number(al()) << "\r\n";
-    out << "dw=" << QString::number(dw(),'g',12) << "\r\n";
-    out << "sf1=" << QString::number(sf1(),'g',12) << "\r\n";
-    out << "#\r\n";
+    out << "point=" << QString::number(defaultAl()) << "\n";
+    out << "dw=" << QString::number(dw(),'g',12) << "\n";
+    out << "sf1=" << QString::number(sf1(),'g',12) << "\n";
+    out << "#\n";
 
-    for(int i=0; i<comments.size(); i++) out << comments.at(i) << "\r\n";
+    for(int i=0; i<comments.size(); i++) out << comments.at(i) << "\n";
 
-    for(int k=0; k< qsl.size(); k++) out << qsl.at(k) << "\r\n";
+    for(int k=0; k< qsl.size(); k++) out << qsl.at(k) << "\n";
 
     file.close();
     return true;
@@ -370,10 +575,10 @@ bool TFID_2D::Writesm2pFile(QString fn)
     }
 
     QTextStream out(&file);
-    out << "point=" << QString::number(al()) << "\r\n";
-    out << "dw=" << QString::number(dw(),'g',12) << "\r\n";
-    out << "sf1=" << QString::number(sf1(),'g',12) << "\r\n";
-    out << "#\r\n";
+    out << "point=" << QString::number(defaultAl()) << "\n";
+    out << "dw=" << QString::number(dw(),'g',12) << "\n";
+    out << "sf1=" << QString::number(sf1(),'g',12) << "\n";
+    out << "#\n";
     for(int i=0; i<comments.size(); i++) out << comments.at(i);
 
     file.close();
@@ -392,10 +597,10 @@ bool TFID_2D::WriteopaFile(QString fn, QIODevice::OpenModeFlag flag)
     }
 
     QTextStream out(&file);
-//    out << "point=" << QString::number(al()) << "\r\n";
-//    out << "dw=" << QString::number(dw(),'g',12) << "\r\n";
-//    out << "sf1=" << QString::number(sf1(),'g',12) << "\r\n";
-//    out << "#\r\n";
+//    out << "point=" << QString::number(al()) << "\n";
+//    out << "dw=" << QString::number(dw(),'g',12) << "\n";
+//    out << "sf1=" << QString::number(sf1(),'g',12) << "\n";
+//    out << "#\n";
 //    for(int i=0; i<comments.size(); i++) out << comments.at(i);
 
     for(int i=0; i<FID.size(); i++)
@@ -414,6 +619,101 @@ bool TFID_2D::WriteopaFile(QString fn, QIODevice::OpenModeFlag flag)
     file.close();
     return true;
 
+}
+
+bool TFID_2D::WriteopaFile(QStringList fnList, QIODevice::OpenModeFlag flag)
+{
+    int currentPosition=0;
+    int count=0;
+    bool ok;
+
+    QMutexLocker locker(&mutex);
+    while(count<FID.size())
+    {
+      ok=FID[count]->WriteopaFile(fnList.at(currentPosition),flag);
+      if(!ok)
+      {
+          errorMessage=QString(Q_FUNC_INFO)+ ": Failed to save data.";
+          return false;
+      }
+
+      currentPosition++;
+      if(currentPosition>fnList.size()-1) currentPosition=0;
+      count++;
+    }
+
+    return true;
+}
+
+// JEOL Format
+bool TFID_2D::ReadjdfFile(QString fn)
+{
+    QMutexLocker locker(&mutex);
+
+    QFile file(fn);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+         errorMessage=QString(Q_FUNC_INFO)+ ": Failed to open " + fn;
+         return false;
+    }
+
+    QFileInfo fInfo;
+    fInfo.setFile(file);
+
+    QDataStream in(&file);
+    in.setFloatingPointPrecision(QDataStream::DoublePrecision);
+    in.setByteOrder(QDataStream::LittleEndian);
+
+    in.skipRawData(1712);
+    unsigned int po;
+    in >> po;
+    setDefaultAl(po);
+    // qDebug() << al();
+
+    // 1968 - 1716 = 252
+    in.skipRawData(252);
+    double d;
+    in >> d;
+    setSF1(d/1e6); // Hz -> MHz
+    // qDebug() << QString(Q_FUNC_INFO) << sf1();
+
+    // 2608 - 1976 = 632
+    in.skipRawData(632);
+    in >> d;
+    setDW(1e6*d/defaultAl());
+    // qDebug() << QString(Q_FUNC_INFO) << dw();
+
+
+    //16384 - 2616 = 13768
+    in.skipRawData(13768);
+    FID.clear();
+
+    for(int k=0; k<1; k++)
+    {
+        FID.append(new TFID(defaultAl()));
+        FID[FID.size()-1]->setSF1(sf1());
+        FID[FID.size()-1]->setDW(dw());
+        for(int m=0; m<defaultAl(); m++) in >> FID[k]->imag->sig[m];
+        for(int m=0; m<defaultAl(); m++) in >> FID[k]->real->sig[m];
+        FID[k]->updateAbs();
+        FID[k]->setCustomXAxis(isXAxisCustom());
+        FID[k]->setXInitialValue(xInitialValue());
+        FID[k]->setDx(dx());
+        FID[k]->setXAxisLabel(xAxisLabel());
+        FID[k]->setXAxisUnitSymbol(xAxisUnitSymbol());
+        FID[k]->setPrefix(prefix());
+        FID[k]->setPlotPrefix(plotPrefix());
+
+        FID[k]->setDomain(TFID::TimeDomain);
+
+        FID[k]->setEmpty(false);
+    } // k
+
+    setCurrentFID(0);
+
+    file.close();
+
+    return true;
 }
 
 bool TFID_2D::ReadopdFile(QString fn)
@@ -441,6 +741,7 @@ bool TFID_2D::ReadopdFile(QString fn)
     for(int k=0; k<n; k++)
     {
         FID.append(new TFID(FAL));
+        FID[FID.size()-1]->setSF1(sf1());
         FID[FID.size()-1]->setDW(FDW);
         for(int m=0; m<FAL; m++) in >> FID[k]->real->sig[m] >> FID[k]->imag->sig[m];
         FID[k]->updateAbs();
@@ -489,6 +790,8 @@ bool TFID_2D::Readsm2dFile(QString fn)
     {
         FID.append(new TFID(FAL));
         FID.at(FID.size()-1)->setDW(FDW);
+        FID[FID.size()-1]->setSF1(sf1());
+
         for(int m=0; m<FAL; m++) in >> FID[k]->real->sig[m] >> FID[k]->imag->sig[m];
         FID[k]->updateAbs();
         FID[k]->setEmpty(false);
@@ -534,6 +837,59 @@ bool TFID_2D::Writesm2dFile(QString fn, QIODevice::OpenModeFlag flag)
     return true;
 
 }
+
+
+bool TFID_2D::Writesm2dFile(QStringList fnList, QIODevice::OpenModeFlag flag)
+{
+    int currentPosition=0;
+    int count=0;
+    bool ok;
+
+    QMutexLocker locker(&mutex);
+    while(count<FID.size())
+    {
+      ok=FID[count]->Writesm2dFile(fnList.at(currentPosition),flag);
+      if(!ok)
+      {
+          errorMessage=QString(Q_FUNC_INFO)+ ": Failed to save data.";
+          return false;
+      }
+
+      currentPosition++;
+      if(currentPosition>fnList.size()-1) currentPosition=0;
+      count++;
+    }
+
+    return true;
+}
+
+
+bool TFID_2D::WriteopdFile(QStringList fnList, QIODevice::OpenModeFlag flag)
+{
+    int currentPosition=0;
+    int count=0;
+    bool ok;
+
+    QMutexLocker locker(&mutex);
+    while(count<FID.size())
+    {
+      ok=FID[count]->WriteopdFile(fnList.at(currentPosition),flag);
+      if(!ok)
+      {
+          errorMessage=QString(Q_FUNC_INFO)+ ": Failed to save data.";
+          return false;
+      }
+
+      currentPosition++;
+      if(currentPosition>fnList.size()-1) currentPosition=0;
+      count++;
+    }
+
+    return true;
+}
+
+
+
 
 bool TFID_2D::WriteopdFile(QString fn, QIODevice::OpenModeFlag flag)
 {
@@ -620,12 +976,24 @@ double TFID::xValue(int k)
     return d0;
 }
 
+int TFID::xIndex(double x)
+{
+    int k=0;
+    double d=x;
+    d*=TMetricPrefix::Decimal(plotPrefix());
+    d-=xInitialValue();
+    d/=dx();
+    k=static_cast<int>(round(d));
+    if(k<0) {k=0;}
+    if(k>al()-1) {k=al()-1;}
+    return k;
+}
 
 bool TFID::exportAscii(QString fn, int xini, int xfin)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString fileName = path+base+".dat";
 
@@ -644,7 +1012,7 @@ bool TFID::exportAscii(QString fn, int xini, int xfin)
         << QString::number(real->sig.at(k),'g',12) << " "
         << QString::number(imag->sig.at(k),'g',12) << " "
         << QString::number(abs->sig.at(k),'g',12)
-        << "\r\n";
+        << "\n";
 
     file.close();
     return true;
@@ -656,7 +1024,7 @@ bool TFID::exportAscii(QString fn)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString fileName = path+base+".dat";
 
@@ -675,42 +1043,42 @@ bool TFID::exportAscii(QString fn)
         << QString::number(real->sig.at(k),'g',12) << " "
         << QString::number(imag->sig.at(k),'g',12) << " "
         << QString::number(abs->sig.at(k),'g',12)
-        << "\r\n";
+        << "\n";
 
     file.close();
     return true;
 
 }
 
-bool TFID::WriteopFiles(QString fn)
+bool TFID::WriteopFiles(QString fn, QIODevice::OpenModeFlag flag)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString opp = path+base+".opp";
     QString opd = path+base+".opd";
 
 
     if(!WriteoppFile(opp)) return false;
-    if(!WriteopdFile(opd)) return false;
+    if(!WriteopdFile(opd,flag)) return false;
 
     return true;
 }
 
 
-bool TFID::Writesm2Files(QString fn)
+bool TFID::Writesm2Files(QString fn, QIODevice::OpenModeFlag flag)
 {
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString sm2p = path+base+".sm2p";
     QString sm2d = path+base+".sm2d";
 
 
     if(!Writesm2pFile(sm2p)) return false;
-    if(!Writesm2dFile(sm2d)) return false;
+    if(!Writesm2dFile(sm2d,flag)) return false;
 
     return true;
 }
@@ -728,9 +1096,9 @@ bool TFID::WriteoppFile(QString fn)
     }
 
     QTextStream out(&file);
-    out << "point=" << QString::number(al()) << "\r\n";
-    out << "dw=" << QString::number(dw(),'g',12) << "\r\n";
-    out << "sf1=" << QString::number(sf1(),'g',12) << "\r\n";
+    out << "point=" << QString::number(al()) << "\n";
+    out << "dw=" << QString::number(dw(),'g',12) << "\n";
+    out << "sf1=" << QString::number(sf1(),'g',12) << "\n";
     out << "#\n";
 
     for(int i=0; i<comment().size(); i++) out << comment().at(i);
@@ -752,9 +1120,9 @@ bool TFID::Writesm2pFile(QString fn)
     }
 
     QTextStream out(&file);
-    out << "point=" << QString::number(al()) << "\r\n";
-    out << "dw=" << QString::number(dw(),'g',12) << "\r\n";
-    out << "sf1=" << QString::number(sf1(),'g',12) << "\r\n";
+    out << "point=" << QString::number(al()) << "\n";
+    out << "dw=" << QString::number(dw(),'g',12) << "\n";
+    out << "sf1=" << QString::number(sf1(),'g',12) << "\n";
     out << "#\n";
 
     for(int i=0; i<comment().size(); i++) out << comment().at(i);
@@ -763,12 +1131,41 @@ bool TFID::Writesm2pFile(QString fn)
     return true;
 }
 
-bool TFID::WriteopdFile(QString fn)
+
+bool TFID::WriteopaFile(QString fn, QIODevice::OpenModeFlag flag)
 {
     QMutexLocker locker(&mutex);
 
     QFile file(fn);
-    if (!file.open(QIODevice::WriteOnly))
+    if (!file.open(flag | QIODevice::Text))
+    {
+         errorMessage=QString(Q_FUNC_INFO)+ ": Failed to open " + fn;
+         return false;
+    }
+
+    QTextStream out(&file);
+
+        for(int k=0; k<al(); k++)
+        {
+           out << QString::number(real->sig.at(k),'g',12)
+               << " "
+               << QString::number(imag->sig.at(k),'g',12)
+               << "\n";
+        } // k
+        out << "\n";
+
+
+    file.close();
+    return true;
+
+}
+
+bool TFID::WriteopdFile(QString fn, QIODevice::OpenModeFlag flag)
+{
+    QMutexLocker locker(&mutex);
+
+    QFile file(fn);
+    if (!file.open(flag))
     {
          errorMessage=QString(Q_FUNC_INFO)+ ": Failed to open " + fn;
          return false;
@@ -786,12 +1183,12 @@ bool TFID::WriteopdFile(QString fn)
 }
 
 
-bool TFID::Writesm2dFile(QString fn)
+bool TFID::Writesm2dFile(QString fn, QIODevice::OpenModeFlag flag)
 {
     QMutexLocker locker(&mutex);
 
     QFile file(fn);
-    if (!file.open(QIODevice::WriteOnly))
+    if (!file.open(flag))
     {
          errorMessage=QString(Q_FUNC_INFO)+ ": Failed to open " + fn;
          return false;
@@ -816,7 +1213,7 @@ bool TFID::WritesmdFile(QString fn)
 
     QFileInfo fi;
     fi.setFile(fn);
-    QString base = fi.baseName();
+    QString base = fi.completeBaseName();
     QString path = fi.absolutePath()+'/';
     QString smd = path+base+".smd";
 
@@ -828,9 +1225,9 @@ bool TFID::WritesmdFile(QString fn)
     }
 
     QTextStream out(&file);
-    out << "point=" << QString::number(al()) << "\r\n";
-    out << "dw=" << QString::number(dw(),'g',12) << "\r\n";
-    out << "sf1=" << QString::number(sf1(),'g',12) << "\r\n";
+    out << "point=" << QString::number(al()) << "\n";
+    out << "dw=" << QString::number(dw(),'g',12) << "\n";
+    out << "sf1=" << QString::number(sf1(),'g',12) << "\n";
     out << "#" << "\n";
 
     for(int i=0; i<al(); i++) out << QString::number(real->sig.at(i),'g',12)
@@ -1153,6 +1550,8 @@ void TFID::swapDomain()
     else  // domain should be Frequency
       {setDomain(TimeDomain);}
 }
+
+
 
 double THalfFID::max(int ini, int fin)
 {

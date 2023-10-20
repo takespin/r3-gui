@@ -4,9 +4,7 @@
 #include "plotter.h"
 #include "metricPrefix.h"
 #include "math.h"
-#include "fft.h"
-#include "fidDomain.h"
-
+#include "float.h"
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -109,6 +107,28 @@ void TFIDPlotters::setBackgroundColor1(QColor col)
     for(int k=0; k<FIDPlotters.size();k++) FIDPlotters[k]->plotter->setBackgroundColor1(col);
 }
 //------------------------------------------------------------------------------
+void TFIDPlotters::setRealColor(QColor col)
+{
+    FRealColor=col;
+    for(int k=0; k<FIDPlotters.size();k++) FIDPlotters[k]->plotter->setRealColor(col);
+}
+void TFIDPlotters::setImagColor(QColor col)
+{
+    FImagColor=col;
+    for(int k=0; k<FIDPlotters.size();k++) FIDPlotters[k]->plotter->setImagColor(col);
+}
+void TFIDPlotters::setAbsColor(QColor col)
+{
+    FAbsColor=col;
+    for(int k=0; k<FIDPlotters.size();k++) FIDPlotters[k]->plotter->setAbsColor(col);
+}
+void TFIDPlotters::setPolarColor(QColor col)
+{
+    FPolarColor=col;
+    for(int k=0; k<FIDPlotters.size();k++) FIDPlotters[k]->plotter->setPolarColor(col);
+}
+
+//------------------------------------------------------------------------------
 void TFIDPlotters::addAndCopyPlotter(FIDPlotter *fp)
 {
     FIDPlotters.append(new FIDPlotter);
@@ -127,9 +147,14 @@ void TFIDPlotters::addAndCopyPlotter(FIDPlotter *fp)
     FIDPlotters[k]->plotter->xfin=fp->plotter->xfin;
     FIDPlotters[k]->plotter->setBackgroundColor0(backgroundColor0());
     FIDPlotters[k]->plotter->setBackgroundColor1(backgroundColor1());
+    FIDPlotters[k]->plotter->setRealColor(realColor());
+    FIDPlotters[k]->plotter->setImagColor(imagColor());
+    FIDPlotters[k]->plotter->setAbsColor(absColor());
+    FIDPlotters[k]->plotter->setPolarColor(polarColor());
 
-    FIDPlotters[k]->plotterDetails->xFinSpinBox->setMaximum(FID_2D->al()-1);
-    FIDPlotters[k]->plotterDetails->xIniSpinBox->setMaximum(FID_2D->al()-2);
+
+    FIDPlotters[k]->plotterDetails->xFinSpinBox->setMaximum(FID_2D->defaultAl()-1);
+    FIDPlotters[k]->plotterDetails->xIniSpinBox->setMaximum(FID_2D->defaultAl()-2);
 
     if(fp->fid2d->FID.size()>0)
     {
@@ -147,7 +172,8 @@ void TFIDPlotters::splitPlot(FIDPlotter *fp, TFIDPlotters::PlotSplitMode splitMo
 {
 
 
-    QSplitter *parentSplitter = (QSplitter*)fp->parentWidget();
+//    QSplitter *parentSplitter = (QSplitter*)fp->parentWidget();
+    QSplitter *parentSplitter = dynamic_cast<QSplitter*>(fp->parentWidget());
 
     if(splitMode==NewWindow)
     {
@@ -199,7 +225,7 @@ void TFIDPlotters::splitPlot(FIDPlotter *fp, TFIDPlotters::PlotSplitMode splitMo
             return;
         }
 
-        QSplitter *grandParentSplitter = (QSplitter*) (parentSplitter->parentWidget());
+        QSplitter *grandParentSplitter = dynamic_cast<QSplitter*>(parentSplitter->parentWidget());
 
         int sIndex=plotSplitters.indexOf(parentSplitter);
         int fIndex=FIDPlotters.indexOf(fp);
@@ -208,7 +234,7 @@ void TFIDPlotters::splitPlot(FIDPlotter *fp, TFIDPlotters::PlotSplitMode splitMo
 
         if(fIndex>-1 && FIDPlotters.size()>1)
         {
-           FIDPlotters[fIndex]->setParent(NULL);
+           FIDPlotters[fIndex]->setParent(nullptr);
            //FIDPlotters[fIndex]->deleteLater();
            FIDPlotters.removeAt(fIndex);
            //qDebug() << "removed view!";
@@ -217,7 +243,7 @@ void TFIDPlotters::splitPlot(FIDPlotter *fp, TFIDPlotters::PlotSplitMode splitMo
         {
            // qDebug()<<"!";
 //            int sIndex=plotSplitters.indexOf(parentSplitter);
-            plotSplitters[sIndex]->setParent(NULL);
+            plotSplitters[sIndex]->setParent(nullptr);
             //plotSplitters[sIndex]->deleteLater();
             plotSplitters.removeAt(sIndex);
 
@@ -245,7 +271,7 @@ void TFIDPlotters::splitPlot(FIDPlotter *fp, TFIDPlotters::PlotSplitMode splitMo
            uncleSplitter->setParent(grandGrandParentSplitter);
 
            int gIndex=plotSplitters.indexOf(grandParentSplitter);
-           plotSplitters[gIndex]->setParent(NULL);
+           plotSplitters[gIndex]->setParent(nullptr);
            plotSplitters.removeAt(gIndex);
 
 
@@ -321,12 +347,18 @@ plotterDetailsWidget::plotterDetailsWidget(QWidget *parent): QWidget(parent)
 
     xIniSpinBox=new QSpinBox; xIniSpinBox->setMinimum(0);xIniSpinBox->setMaximum(0);
     xFinSpinBox=new QSpinBox; xFinSpinBox->setMinimum(0);xFinSpinBox->setMaximum(0);
-    xIniValLineEdit=new QLineEdit; xIniValLineEdit->setReadOnly(true);
-    xFinValLineEdit=new QLineEdit; xFinValLineEdit->setReadOnly(true);
+    xIniValLineEdit=new QLineEdit; xIniValLineEdit->setReadOnly(false);
+    xFinValLineEdit=new QLineEdit; xFinValLineEdit->setReadOnly(false);
     xIniUnitLabel=new QLabel;
     xFinUnitLabel=new QLabel;
 
     xFullRangePushButton=new QPushButton(tr("Full Range"));
+
+    vOffsetSpinBox = new QDoubleSpinBox;
+    vOffsetSpinBox->setRange(0,1);
+    vOffsetSpinBox->setDecimals(1);
+    vOffsetSpinBox->setSingleStep(0.1);
+    vOffsetSpinBox->setValue(0.5);
 
     //xPosSpinBox=new QSpinBox; xPosSpinBox->setMinimum(0);
 
@@ -367,6 +399,8 @@ plotterDetailsWidget::plotterDetailsWidget(QWidget *parent): QWidget(parent)
       hLayout2->addWidget(xFinValLineEdit); hLayout2->addWidget(xFinUnitLabel);
     vLayout2->addLayout(hLayout2);
     vLayout2->addWidget(xFullRangePushButton);
+    vLayout2->addWidget(new QLabel("Y Offset"));
+    vLayout2->addWidget(vOffsetSpinBox);
     vLayout2->addStretch();
 //    vLayout2->addWidget(new QLabel("soon."));
 
@@ -380,7 +414,8 @@ plotterDetailsWidget::plotterDetailsWidget(QWidget *parent): QWidget(parent)
     connect(xFinSpinBox,SIGNAL(valueChanged(int)),this,SLOT(onXFinSpinBoxValueChanged()));
 
     connect(xPosLineEdit,SIGNAL(returnPressed()),this,SLOT(onXPosLineEditReturnPressed()));
-    //connect(xIniValLineEdit,SIGNAL(returnPressed()),this,SLOT(onXIniValLineEditReturnPressed()));
+    connect(xIniValLineEdit,SIGNAL(returnPressed()),this,SLOT(onXIniValLineEditReturnPressed()));
+    connect(xFinValLineEdit,SIGNAL(returnPressed()),this,SLOT(onXFinValLineEditReturnPressed()));
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
 //    mainLayout->setMargin(0);
@@ -415,29 +450,32 @@ void plotterDetailsWidget::onXIniValLineEditReturnPressed()
 
   bool ok;
 
-  int xi = xIniValLineEdit->text().toDouble(&ok);
+  double d = xIniValLineEdit->text().toDouble(&ok);
   if(!ok)
   {
-      QMessageBox::warning(this,"error","Invalid Number.");
+      QMessageBox::warning(this,"error","Invalid Initial Value: " + xIniValLineEdit->text());
       return;
   }
 
-  if(xi<0)
-  {
-      QMessageBox::warning(this,"error","Out of Range.");
-      return;
-  }
-
- // qDebug() << xi;
+  emit xInitialValueUpdateRequest(d);
 
 }
 //------------------------------------------------------------------------------
 void plotterDetailsWidget::onXFinValLineEditReturnPressed()
 {
 
+    bool ok;
+
+    double d = xFinValLineEdit->text().toDouble(&ok);
+    if(!ok)
+    {
+        QMessageBox::warning(this,"error","Invalid Final Value: " + xFinValLineEdit->text());
+        return;
+    }
+
+    emit xFinalValueUpdateRequest(d);
 
 }
-
 //------------------------------------------------------------------------------
 void plotterDetailsWidget::onXIniSpinBoxValueChanged()
 {
@@ -486,7 +524,6 @@ void plotterDetailsWidget::setPlotRangeInfo(QStringList sl)
 }
 //------------------------------------------------------------------------------
 FIDPlotter::FIDPlotter(QWidget *parent): QWidget(parent)
-//FIDPlotter::FIDPlotter(QWidget *parent): Plotter(parent)
 {
     plotter = new Plotter;
     fid2d = new TFID_2D;
@@ -534,18 +571,29 @@ FIDPlotter::FIDPlotter(QWidget *parent): QWidget(parent)
     connect(plotterDetails,SIGNAL(xPlotRangeUpdateRequest(int,int)),plotter,SLOT(updatePlotRange(int,int)));
     connect(plotterDetails,SIGNAL(xCursorPositionUpdateRequest(int)),plotter,SLOT(updateXCursorPosition(int)));
     connect(plotterDetails->xFullRangePushButton,SIGNAL(clicked()),this,SLOT(xFullRangePlot()));
-
+    connect(plotterDetails->vOffsetSpinBox,SIGNAL(valueChanged(double)),this,SLOT(updateVOffset(double)));
+    connect(plotterDetails,SIGNAL(xInitialValueUpdateRequest(double)), this, SLOT(updateXInitialValue(double)));
+    connect(plotterDetails,SIGNAL(xFinalValueUpdateRequest(double)), this, SLOT(updateXFinalValue(double)));
     connect(penWidthSpinBox,SIGNAL(valueChanged(int)),plotter,SLOT(setPenWidth(int)));
 
     connect(FFTCheckBox,SIGNAL(toggled(bool)),this,SLOT(update()));
     connect(processCheckBox,SIGNAL(toggled(bool)),this,SLOT(update()));
    // connect(phase0SpinBox,SIGNAL(valueChanged(int)),this,SLOT(update()));
 
+    new QShortcut(QKeySequence(Qt::CTRL+Qt::Key_0), this, SLOT(xFullRangePlot()));
+    new QShortcut(QKeySequence(Qt::CTRL+Qt::Key_E), this, SLOT(exportAscii()));
+
+}
+//------------------------------------------------------------------------------
+void FIDPlotter::onWheelToHScrollCheckBoxStateChanged()
+{
+   plotter->setWheelToHScroll(wheelToHScrollCheckBox->isChecked());
 }
 //------------------------------------------------------------------------------
 void FIDPlotter::createActions()
 {
-
+    wheelToHScrollCheckBox = new QCheckBox(tr("wheel to move R/L"));
+    connect(wheelToHScrollCheckBox,SIGNAL(stateChanged(int)),this,SLOT(onWheelToHScrollCheckBoxStateChanged()));
     FFTCheckBox = new QCheckBox(tr("FFT")); FFTCheckBox->setChecked(false);
     processCheckBox = new QCheckBox(tr("Process")); processCheckBox->setChecked(false);
     formatComboBox = new QComboBox;
@@ -576,7 +624,7 @@ void FIDPlotter::createActions()
 
     penWidthSpinBox = new QSpinBox;
     penWidthSpinBox->setMinimum(1);
-    penWidthSpinBox->setMaximum(10);
+    penWidthSpinBox->setMaximum(64);
 
     scaleComboBox = new QComboBox;
     scaleComboBox->addItems(QStringList() << tr("auto") << tr("manual"));
@@ -655,10 +703,12 @@ void FIDPlotter::createToolBar()
     //toolBar->addAction(moveRightAction);
     //toolBar->addSeparator();
     toolBar->addWidget(IDLabel);
-    toolBar->addWidget(splitViewComboBox); splitViewComboBox->setFixedWidth(60);
+    toolBar->addWidget(splitViewComboBox); splitViewComboBox->setFixedWidth(80);
     toolBar->addSeparator();
     toolBar->addWidget(new QLabel(tr("Scale")));
     toolBar->addWidget(scaleComboBox);scaleComboBox->setFixedWidth(80);
+    toolBar->addSeparator();
+    toolBar->addWidget(wheelToHScrollCheckBox);
     toolBar->addSeparator();
     toolBar->addWidget(formatComboBox);
     toolBar->addSeparator();
@@ -712,6 +762,21 @@ void FIDPlotter::thinnerLine()
     plotter->refresh();
 }
 //------------------------------------------------------------------------------
+void FIDPlotter::updateVOffset(double d)
+{
+    if(!isFID2DSetted())
+    {  //qDebug() << QString(Q_FUNC_INFO) << "!isFIDSetted";
+        return;
+    }
+    if(fid2d->FID.isEmpty())
+    {
+        return;
+    }
+//    plotter->setVOffset(round((0.5-d)*plotter->rect().height()));
+    plotter->setVOffsetRatio(d);
+    update();
+}
+//------------------------------------------------------------------------------
 void FIDPlotter::xFullRangePlot()
 {
     if(!isFID2DSetted())
@@ -739,6 +804,7 @@ void FIDPlotter::xFullRangePlot()
 //------------------------------------------------------------------------------
 void FIDPlotter::update()
 {
+//qDebug() << QString(Q_FUNC_INFO) << "0";
     //if(processCheckBox->isChecked()) processPanelWidget->show(); else processPanelWidget->hide();
 
     if(!isFID2DSetted())
@@ -749,6 +815,7 @@ void FIDPlotter::update()
     {  //qDebug() << QString(Q_FUNC_INFO) <<"size<1 ";
         return;
     }
+//    qDebug() << QString(Q_FUNC_INFO) << "1";
 
     FIDSelectSpinBox->setMaximum(fid2d->FID.size());
    // if(fid2d->FID.size() < FIDSelectSpinBox->value()) FIDSelectSpinBox->setMaximum(fid2d->FID.size());
@@ -769,9 +836,9 @@ void FIDPlotter::update()
         }
         plotter->localFID->updateAbs();
 
-        fidDomain::process(plotter->localFID,fidDomain::TimeDomain);
+       // fidDomain::process(plotter->localFID,fidDomain::TimeDomain);
         TFFT fft;
-        fft.setAxisDomain(fidDomain::FrequencyDomain);
+        fft.setAxisDomain(TFFT::SetFrequency);
         fft.process(plotter->localFID);
 
         plotter->localFID->setEmpty(false);
@@ -785,7 +852,7 @@ void FIDPlotter::update()
     }
 
     //plotter->localFID->rotate(phase0SpinBox->value());
-    //qDebug() << QString(Q_FUNC_INFO) ;//<< phase0SpinBox->value();
+    //qDebug() << QString(Q_FUNC_INFO) << phase0SpinBox->value();
 
     plotter->adjustScale();
     plotter->refresh();
@@ -846,6 +913,13 @@ void FIDPlotter::exportImage()
     QString fileName= QFileDialog::getSaveFileName(this, "Export Image", path(), "PNG(*.png)");
    // QString fileName = QFileDialog::getSaveFileName();
     if(fileName.isEmpty()) return;
+
+    QFileInfo fi(fileName);
+    QString suffix=fi.suffix();
+    if(0!=QString::compare(suffix,"png",Qt::CaseInsensitive))
+    {
+        fileName.append(".png");
+    }
 
     QFile file(fileName);
     file.open(QIODevice::WriteOnly);
@@ -938,16 +1012,13 @@ Plotter::Plotter(QWidget *parent) :
   fidSetted=false;
   scaleSetting=ReceiverScale;
   setScale(1.0); // will be corrected later (Takeda)
+  setVOffsetRatio(0.5);
 
   setPlotSettings(PlotSettings());
 
   setPlotFormat(CartesianPlot);
 
   setPenWidth(1);
-
-  // default background gradation color
-  setBackgroundColor0(QColor("midnightblue"));
-  setBackgroundColor1(QColor("black"));
 
   setVOffset(0);
   vCenter=0.0;
@@ -960,6 +1031,18 @@ Plotter::Plotter(QWidget *parent) :
   rightMargin=0;
 
   plotItemOption << plotReal << plotImag << plotAbs;
+  setWheelToHScroll(false);
+
+  // default background gradation color
+  setBackgroundColor0(QColor("midnightblue"));
+  setBackgroundColor1(QColor("black"));
+
+  // default colors
+  setRealColor(QColor("deeppink"));
+  setImagColor(QColor("lime"));
+  setAbsColor(QColor("yellow"));
+  setPolarColor(QColor("darkOrange"));
+
 
 }
 //------------------------------------------------------------------------------
@@ -1075,6 +1158,7 @@ void Plotter::resizeEvent(QResizeEvent * /* event */)
     absButton->move(realButton->width()+imagButton->width()+5,5);
 */
 
+    setVOffsetRatio(vOffsetRatio());
     refreshPixmap();
 }
 //------------------------------------------------------------------------------
@@ -1232,7 +1316,31 @@ void Plotter::updatePlotRange(int i, int f)
     xini=i; xfin=f;
     refreshPixmap();
 }
+//------------------------------------------------------------------------------
+void FIDPlotter::updateXInitialValue(double d)
+{
+    int kini;
+    kini=fid2d->FID.at(fid2d->currentFID())->xIndex(d);
+    if(kini>plotter->xfin)
+    {
+       kini=plotter->xfin-1;
+    }
+    if(kini<0) {kini=0;}
+    plotter->updatePlotRange(kini, plotter->xfin);
 
+}
+void FIDPlotter::updateXFinalValue(double d)
+{
+    int kfin;
+    kfin=fid2d->FID.at(fid2d->currentFID())->xIndex(d);
+    if (kfin<plotter->xini)
+    {
+        kfin=plotter->xini+1;
+    }
+    if (kfin>fid2d->FID.at(fid2d->currentFID())->al()-1) {kfin=fid2d->FID.at(fid2d->currentFID())->al()-1;}
+    plotter->updatePlotRange(plotter->xini,kfin);
+
+}
 //------------------------------------------------------------------------------
 void Plotter::keyPressEvent(QKeyEvent *event)
 {
@@ -1243,12 +1351,6 @@ void Plotter::keyPressEvent(QKeyEvent *event)
 
     switch(event->key())
     {
-        //case Qt::Key_Plus:
-        //    zoomIn();
-        //    break;
-        //case Qt::Key_Minus:
-        //    zoomOut();
-        //    break;
 
         case Qt::Key_Left:
           if(vCursorEnabled())
@@ -1287,8 +1389,11 @@ void Plotter::keyPressEvent(QKeyEvent *event)
             //zoomStack[curZoom].scroll(0,-1);
             //scale/=1.2;
             oxini=xini;oxfin=xfin;
-            xini=oxini-0.2*(oxfin-oxini);
-            xfin=oxfin+0.2*(oxfin-oxini);
+            dx=oxfin-oxini;
+            if (dx==0) dx=1;
+            xini=oxini-0.5*dx;
+            xfin=oxfin+round(0.5*dx);
+            // 27Apr2023: round is required to cover the case in which oxini=0 and oxfin=1
             if(xini<0) {xini=0;}
             if(xfin>fid->al()-1) {xfin=fid->al()-1;}
             refreshPixmap();
@@ -1297,8 +1402,9 @@ void Plotter::keyPressEvent(QKeyEvent *event)
             //zoomStack[curZoom].scroll(0,+1);
             //scale*=1.2;
             oxini=xini;oxfin=xfin;
-            xini=oxini+0.2*(oxfin-oxini);
-            xfin=oxfin-0.2*(oxfin-oxini);
+            dx=oxfin-oxini;
+            xini=oxini+0.25*dx;
+            xfin=oxfin-0.25*dx;
             if(xini>=xfin) {xini=oxini; xfin=oxfin;}
             refreshPixmap();
             break;
@@ -1313,7 +1419,9 @@ void Plotter::wheelEvent(QWheelEvent *event)
 {
     if(!fidSetted) return;
 
-    if(event->orientation()==Qt::Horizontal)
+    if(event->orientation()==Qt::Horizontal ||
+       (event->orientation()==Qt::Vertical && wheelToHScroll()==true)
+            )
     {
 
 #if defined(__APPLE__)
@@ -1365,8 +1473,13 @@ void Plotter::updateRubberBandRegion()
 //------------------------------------------------------------------------------
 void Plotter::refreshPixmap()
 {
+//    qDebug() << QString(Q_FUNC_INFO) << "0";
     if(!fidSetted) {return;}
+//    qDebug() << QString(Q_FUNC_INFO) << "1";
+
     if(fid->isEmpty()) { return;}
+//    qDebug() << QString(Q_FUNC_INFO) << "2";
+
     pixmap=QPixmap(size());
 //    pixmap.fill(this,0,0); // obsolete and does not work for Qt5 2014 Jul Takeda
     pixmap.fill(QColor("aliceblue"));
@@ -1376,9 +1489,9 @@ void Plotter::refreshPixmap()
 
     drawFrame(&painter);
     drawXTicks(&painter);
+    if(bitLineIsShown()) drawBitLines(&painter);
     drawFID(&painter);
 
-    if(bitLineIsShown()) drawBitLines(&painter);
 
     if(vCursorIsShown())
     {
@@ -1432,8 +1545,9 @@ void Plotter::refreshPixmap()
     emit xIniSignal(xini);
     emit xFinSignal(xfin);
 
-    update();
+    update(); // QWidget::update()
 
+  //  qDebug() << QString(Q_FUNC_INFO);
 }
 //------------------------------------------------------------------------------
 void Plotter::drawFrame(QPainter *painter)
@@ -1468,25 +1582,30 @@ void Plotter::drawXTicks(QPainter *painter)
     double x1,x2,tick,p;
     QString xLabel=fid->xAxisUnitString();
 
-//qDebug () << QString(Q_FUNC_INFO) << ": " << fid->xAxisUnitString() << fid->xAxisUnitSymbol();
+// qDebug () << QString(Q_FUNC_INFO) << ": " << fid->xAxisUnitString() << fid->xAxisUnitSymbol();
 
     if(fid->xAxisLabel()!="") xLabel =  fid->xAxisLabel() + " / " + xLabel;
+//    qDebug() << QString(Q_FUNC_INFO) << fid->domain() << fid->xAxisLabel() << fid->xAxisUnitString();
 
     x1=fid->xValue(xini);
     x2=fid->xValue(xfin);
 
-    if(x2-x1==0) return;
+    if(fabs(x2-x1)<DBL_EPSILON) return;
     tick=tic(x1,x2);
     if(x1>x2) tick*=-1.0;
 
 // qDebug() << QString(Q_FUNC_INFO) << xini << xfin
 //          << x1 << x2 << "tick: " << tick;
 
+//    qDebug() << QString(Q_FUNC_INFO) << fid->xInitialValue();
     double xIniVal = fid->xInitialValue()/TMetricPrefix::Decimal(fid->plotPrefix());
+//    qDebug() << QString(Q_FUNC_INFO) << xIniVal;
 
-    xIniVal = ((int)(xIniVal/tick))*tick;
+//    xIniVal = ((int)(xIniVal/tick))*tick;
+    xIniVal = static_cast<int>(xIniVal/tick)*tick;
 
-    p = xIniVal + ((int)((x1-xIniVal)/tick) + 1)*tick;
+//    p = xIniVal + ((int) ((x1-xIniVal)/tick) + 1)*tick;
+    p = xIniVal + (static_cast<int>((x1-xIniVal)/tick) + 1)*tick;
 
     // qDebug() << QString(Q_FUNC_INFO) << "xIniVal: " << xIniVal <<"p: " << p << "(p-x1)*(p-x2)" << (p-x1)*(p-x2);
 
@@ -1552,26 +1671,26 @@ void Plotter::drawBitLines(QPainter *painter)
    int qq=trunc(log2(q))-3;
    int y;
 
-   int c=qq; if(c<1) c=1;
+   int c=qq; if(c<1) c=0;
    y=vCenter-scale2*pow(2,c);
    while(y>0)
    {
       painter->drawLine(rect.left(),y,rect.right(),y);
       painter->drawText(rect.right()-50,round(y-16),50,14,
-                        Qt::AlignHCenter | Qt::AlignTop, QString::number(c)+" bit");
+                        Qt::AlignHCenter | Qt::AlignTop, QString::number(c+1)+" bit");
       ++c;
       y=vCenter-scale2*pow(2,c);
  //     --qq;
    } // while
 
 
-   c=qq; if(c<1) c=1;
+   c=qq; if(c<1) c=0;
    y=vCenter+scale2*pow(2,c);
    while(y<rect.height())
    {
        painter->drawLine(rect.left(),y,rect.right(),y);
        painter->drawText(rect.right()-50,round(y-14),50,14,
-                         Qt::AlignHCenter | Qt::AlignTop, QString::number(c)+" bit");
+                         Qt::AlignHCenter | Qt::AlignTop, QString::number(c+1)+" bit");
 
        ++c;
        y=vCenter+scale2*pow(2,c);
@@ -1588,7 +1707,7 @@ void Plotter::drawGrid(QPainter *painter)
     if(!rect.isValid()) return;
 
     PlotSettings settings = zoomStack[curZoom];
-    QPen quiteDark=palette().dark().color().light();
+//    QPen quiteDark=palette().dark().color().lighter();
     QPen light=palette().light().color();
     light.setColor(Qt::gray);
 
@@ -1712,7 +1831,8 @@ void Plotter::drawHalfFID(THalfFID *hFID, QPainter *painter, QColor color)
 
 
     vCenter=topMargin+(height()-topMargin-bottomMargin)/2;
-    double scale2=scale()*(height()-(topMargin+bottomMargin))/2;
+//    double scale2=scale()*(height()-(topMargin+bottomMargin))/2;
+    double scale2=scale()*(vOffset()+(height()-(topMargin+bottomMargin))/2);
 
     double x1=leftMargin;
     double y1=round(vCenter-scale2*(hFID->sig.at(xini) - plotOffset)) + vOffset();
@@ -1820,17 +1940,21 @@ void Plotter::drawFID(QPainter *painter)
 
     painter->setClipRect(rect.adjusted(+1,+1,-1,-1));
 
-    if(fid->domain()==TFID::FrequencyDomain) setVOffset(rect.height()*0.4); else setVOffset(0);
+//    if(fid->domain()==TFID::FrequencyDomain) setVOffset(rect.height()*0.4); else setVOffset(0);
 
     if(plotFormat()==CartesianPlot)
     {
-      if(plotItemOption.contains(plotImag)) drawHalfFID(fid->imag, painter, QColor("lime"));
-      if(plotItemOption.contains(plotReal)) drawHalfFID(fid->real, painter, QColor("deeppink"));
-      if(plotItemOption.contains(plotAbs)) drawHalfFID(fid->abs, painter, QColor("yellow"));
+//      if(plotItemOption.contains(plotImag)) drawHalfFID(fid->imag, painter, QColor("lime"));
+//      if(plotItemOption.contains(plotReal)) drawHalfFID(fid->real, painter, QColor("deeppink"));
+//      if(plotItemOption.contains(plotAbs)) drawHalfFID(fid->abs, painter, QColor("yellow"));
+      if(plotItemOption.contains(plotAbs)) drawHalfFID(fid->abs, painter, absColor());
+      if(plotItemOption.contains(plotImag)) drawHalfFID(fid->imag, painter, imagColor());
+      if(plotItemOption.contains(plotReal)) drawHalfFID(fid->real, painter, realColor());
     }
     else // PolarPlot
     {
-       drawPolarFID(painter, QColor("darkorange"));
+//       drawPolarFID(painter, QColor("darkorange"));
+       drawPolarFID(painter, polarColor());
     }
 
 }
@@ -1847,11 +1971,11 @@ void Plotter::adjustScale()
     if(!fidSetted) {return;}
     if(scaleSetting==ManualScale) {return;}
 
-    if(fid->abs->absMax()==0) {setScale(1.0); return;}
+    if(fabs(fid->abs->absMax())<DBL_EPSILON) {setScale(1.0); return;}
 
     if(scaleSetting==DataScale)
     {
-        setScale(1/(fid->abs->absMax()));
+        setScale(0.98/(fid->abs->absMax()));
 //        qDebug() << "scale: " << scale();
     }
     else if (scaleSetting==ReceiverScale)

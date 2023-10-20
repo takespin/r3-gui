@@ -16,7 +16,7 @@ class THalfFID {
 
     THalfFID() {sig.clear();}
     THalfFID(int al) {sig.fill(0.0, al);}
-    virtual ~THalfFID() {sig.clear();}
+    ~THalfFID() {sig.clear();}
 
     void initialize() {sig.fill(0.0,al());}
     //void initialize(int al) {sig.fill(0.0, al);}
@@ -44,7 +44,7 @@ class THalfFID {
 
 class TFIDXUnit{
   public:
-  enum xUnit {Second, Hz, ppm, Tesla, QuantumNumber};
+  enum xUnit {Second, Hz, ppm, Tesla, QuantumNumber, NoUnit};
 };
 
 class TFID
@@ -55,8 +55,8 @@ class TFID
     ~TFID() {delete real; delete imag; delete abs;}
 
     THalfFID *real,*imag,*abs;
-    TDomain domain() {return FDomain;}
-    void setDomain(TDomain domain) {FDomain=domain;}
+    int domain() {return FDomain;}
+    void setDomain(int domain) {FDomain=domain;}
 
     TFIDXUnit::xUnit xunit() {return FXUnit;}
     void setXUnit(TFIDXUnit::xUnit xu) {FXUnit=xu;}
@@ -89,6 +89,7 @@ class TFID
     void setCustomXAxis(bool b) {FIsXAxisCustom=b;}
 
     double xValue(int k);
+    int xIndex(double x);
     QString xAxisUnitString();
     // int pivot;
     int na() {return FNA;}
@@ -126,13 +127,16 @@ class TFID
 
     // binary data (float)
     bool Writesm2pFile(QString fn);
-    bool Writesm2dFile(QString fn);
-    bool Writesm2Files(QString fn);
+    bool Writesm2dFile(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
+    bool Writesm2Files(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
 
     // binary data (double)
     bool WriteoppFile(QString fn);
-    bool WriteopdFile(QString fn);
-    bool WriteopFiles(QString fn);
+    bool WriteopdFile(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
+    bool WriteopFiles(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
+
+    // ascii
+    bool WriteopaFile(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
 
     bool exportAscii(QString fn);
     bool exportAscii(QString fn,int xini, int xfin);
@@ -169,7 +173,7 @@ class TFID
 
     QMutex mutex;
 
-    TDomain FDomain;
+    int FDomain;
 
 };
 
@@ -228,6 +232,7 @@ class TFID_2D
     QString xAxisUnitSymbol() {return FXAxisUnitSymbol;}
     void setXAxisUnitSymbol(QString qs) {FXAxisUnitSymbol=qs;}
 
+    bool ReadjdfFile(QString fn);
     bool ReadsmdFile(QString fn);
 
     bool Readsm2pFile(QString fn);
@@ -235,15 +240,19 @@ class TFID_2D
     bool Readsm2Files(QString fn);
     bool Writesm2pFile(QString fn);
     bool Writesm2dFile(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
-    bool Writesm2Files(QString fn);
+    bool Writesm2dFile(QStringList fnList, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
+    bool Writesm2Files(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
 
-
+    bool ReadopaFile(QString fn); // called by ReadopaFile"s", declared below.
+    bool ReadopaFiles(QString fn); // ascii data, parameter is supposed to be stored in .opp, just like .opd (Jul 2020 KT)
     bool ReadoppFile(QString fn);
     bool ReadopdFile(QString fn);
     bool ReadopFiles(QString fn);
     bool WriteoppFile(QString fn);
     bool WriteopdFile(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
-    bool WriteopFiles(QString fn);
+    bool WriteopdFile(QStringList fnList, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
+    bool WriteopFiles(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly);
+    bool WriteopaFile(QStringList fnList, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly); // asci
     bool WriteopaFile(QString fn, QIODevice::OpenModeFlag flag=QIODevice::WriteOnly); // asci
 
     int currentFID() {return FCurrentFID;}
@@ -253,8 +262,18 @@ class TFID_2D
     void setNA(int na) {FNA=na; for(int j=0; j<FID.size(); j++) FID[j]->setNA(na);}
     int nd() {return FND;}
     void setND(int nd) {FND=nd; for(int j=0; j<FID.size(); j++) FID[j]->setND(nd);}
-    int al() {return FAL;}
-    void setAl(int al) {FAL=al; for(int j=0; j<FID.size(); j++) FID[j]->setAL(al);}
+    int defaultAl() {
+//      if(!FID.isEmpty()) return FID.at(0)->al();
+//      else return 0;
+      return FAL;
+
+    }
+//    int al() {return FAL;}
+    void setDefaultAl(int al) {
+        FAL=al;
+//        if(!FID.isEmpty()) {FID[0]->setAL(al);}
+    }
+//    void setAl(int al) {FAL=al; for(int j=0; j<FID.size(); j++) FID[j]->setAL(al);}
     double dw() {return FDW;}
     void setDW(double dw) {FDW=dw; for(int j=0; j<FID.size(); j++) FID[j]->setDW(dw);}
     double sf1() {return FSF1;}
