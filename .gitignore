@@ -45,3 +45,7 @@ CMakeLists.txt.user*
 build/
 
 .DS_Store
+
+test.opd
+
+test.opp

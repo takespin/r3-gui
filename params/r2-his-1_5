@@ -1,0 +1,14 @@
+[r2]
+Angle%20increment=10
+Apodization%20width=100
+Distance=1.5
+Gyromagnetic%20ratio%20%28I%29=10.708
+Gyromagnetic%20ratio%20%28S%29=10.708
+Isotropic%20shift%20%28I%29=-4370
+Isotropic%20shift%20%28S%29=7495
+Nutation%20speed=
+Output%20filename=/Users/takezo/Documents/GitHub/takespin/Untitled
+Spinning%20speed=11.865
+al=1024
+nObs=5
+nSteps=20
